@@ -1,5 +1,5 @@
-import { stalwartClientFromEnv } from "../dist/client/stalwartClientFromEnv.js"
-import type { StalwartClientConfig } from "../dist/client/stalwartClientConfigSchema.js"
+import { stalwartClientFromEnv } from "../src/client/stalwartClientFromEnv.js"
+import type { StalwartClientConfig } from "../src/client/stalwartClientConfigSchema.js"
 
 /**
  * Shared E2E setup: load config from `.env` (live) or

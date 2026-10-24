@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { coreEcho } from "../dist/jmap/coreEcho.js"
-import { jmapSessionGet } from "../dist/jmap/jmapSessionGet.js"
-import type { StalwartClientConfig } from "../dist/client/stalwartClientConfigSchema.js"
+import { coreEcho } from "../src/jmap/coreEcho.js"
+import { jmapSessionGet } from "../src/jmap/jmapSessionGet.js"
+import type { StalwartClientConfig } from "../src/client/stalwartClientConfigSchema.js"
 import { stalwartE2eSetup } from "./e2eSetup.js"
 
 let config: StalwartClientConfig

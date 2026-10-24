@@ -211,7 +211,7 @@ and the test passes.
   `cliApp`. Helpers that are intentionally CLI-invisible
   (`stalwartMethodCall`, `jmapSetErrorCheck`, `sseEventsParse`, …) go in the
   test's `excludedExports` set with a comment.
-- E2E (live + local): gate on env, import from `dist/`, never commit `.env`.
+- E2E (live + local): gate on env, import from `../src/…` (no build needed), never commit `.env`.
 
 ## 8. E2E conventions + safety rules
 
