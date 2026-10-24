@@ -7,6 +7,10 @@ import { managementCommands } from "../management/cli/managementCommands.js"
 import { oauthCommands } from "../oauth/cli/oauthCommands.js"
 import { registryCommands } from "../registry/cli/registryCommands.js"
 import { scimCommands } from "../scim/cli/scimCommands.js"
+import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.js"
+import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
+import { formsCommands } from "../forms/cli/formsCommands.js"
+import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
 import { directoryCommands } from "../registry/directory/cli/directoryCommands.js"
 
 const routes = buildRouteMap({
@@ -21,6 +25,10 @@ const routes = buildRouteMap({
     live: liveCommands,
     directory: directoryCommands,
     scim: scimCommands,
+    "well-known": wellKnownCommands,
+    autodiscover: autodiscoverCommands,
+    forms: formsCommands,
+    "calendar-rsvp": calendarRsvpCommands,
   },
   docs: {
     brief: "TypeScript client and CLI for the Stalwart mail server (JMAP + management API)",

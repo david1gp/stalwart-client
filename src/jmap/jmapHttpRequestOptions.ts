@@ -5,7 +5,7 @@ export type JmapHttpRequestBody =
   | { readonly kind: "raw"; readonly value: Uint8Array | string; readonly contentType: string }
   | { readonly kind: "form"; readonly value: Record<string, string> }
 
-export type JmapHttpResponseType = "json" | "text" | "bytes" | "void" | "stream"
+export type JmapHttpResponseType = "json" | "text" | "bytes" | "void" | "stream" | "redirect"
 
 export type JmapHttpRequestOptions = {
   config: JmapClientConfig
@@ -15,7 +15,7 @@ export type JmapHttpRequestOptions = {
   body?: JmapHttpRequestBody
   /** Send the Authorization header (default true). Set false for anonymous endpoints. */
   auth?: boolean
-  /** "json" (default) | "text" | "bytes" | "void" | "stream" (SSE / live feeds) */
+  /** "json" (default) | "text" | "bytes" | "void" | "stream" (SSE / live feeds) | "redirect" (3xx observed, not followed) */
   responseType?: JmapHttpResponseType
   headers?: Record<string, string>
 }

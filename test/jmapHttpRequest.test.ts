@@ -168,3 +168,29 @@ describe("jmapHttpRequest fetch sends Bearer and parses JSON", () => {
     if (!r.success) expect(r.op).toBe("jmapHttpRequest")
   })
 })
+
+describe("jmapHttpRequest redirect mode observes 3xx without following", () => {
+  let mock: ReturnType<typeof fetchMockCreate> | undefined
+  afterEach(() => {
+    mock?.restore()
+    mock = undefined
+  })
+
+  test("returns status and Location for a 307", async () => {
+    mock = fetchMockCreate(() => new Response(null, { status: 307, headers: { location: "/jmap/session" } }))
+    const r = await jmapHttpRequest({
+      config: config.data,
+      method: "GET",
+      path: "/.well-known/jmap",
+      responseType: "redirect",
+    })
+    expect(r).toEqual({ success: true, data: { status: 307, location: "/jmap/session" } })
+  })
+
+  test("a 2xx where a redirect was expected is a ResultErr", async () => {
+    mock = fetchMockCreate(() => fetchMockJson({}))
+    const r = await jmapHttpRequest({ config: config.data, method: "GET", path: "/x", responseType: "redirect" })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.errorMessage).toContain("Expected a redirect")
+  })
+})

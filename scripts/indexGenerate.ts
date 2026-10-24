@@ -75,7 +75,7 @@ async function generate(): Promise<void> {
 
   const lines: string[] = []
   for (const [dir, entries] of [...byDir.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
-    if (dir !== "client" && dir !== "jmap") lines.push(`\n// ${dir}`)
+    if (dir !== "client" && dir !== "jmap") lines.push(lines.length === 0 ? `// ${dir}` : `\n// ${dir}`)
     entries.sort((a, b) => (a.name < b.name ? -1 : 1))
     for (const entry of entries) {
       lines.push(

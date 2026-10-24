@@ -1,4 +1,5 @@
 import { createResult, createResultError, type PromiseResult, resultTryParsingFetchErr } from "#result"
+import type { JmapHttpRedirect } from "./JmapHttpRedirect.js"
 import { jmapAuthHeader } from "./jmapAuthHeader.js"
 import type { JmapHttpRequestOptions } from "./jmapHttpRequestOptions.js"
 import { jmapHttpRequestUrl } from "./jmapHttpRequestUrl.js"
@@ -6,6 +7,9 @@ import { jmapHttpRequestUrl } from "./jmapHttpRequestUrl.js"
 const DEFAULT_TIMEOUT_MS = 30_000
 const DEFAULT_RETRIES = 0
 
+export async function jmapHttpRequest(
+  options: JmapHttpRequestOptions & { responseType: "redirect" },
+): PromiseResult<JmapHttpRedirect>
 export async function jmapHttpRequest(
   options: JmapHttpRequestOptions & { responseType: "stream" },
 ): PromiseResult<ReadableStream<Uint8Array>>
@@ -69,11 +73,23 @@ export async function jmapHttpRequest(options: JmapHttpRequestOptions): PromiseR
           headers,
           body: bodyInit,
           signal: controller.signal,
+          ...(responseType === "redirect" ? { redirect: "manual" as const } : {}),
         })
       } catch (error) {
         lastError = createResultError(op, "Fetch failed", error instanceof Error ? error.message : String(error))
         if (attempt < maxAttempts - 1) continue
         return lastError
+      }
+
+      if (responseType === "redirect" && response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location")
+        if (location === null) {
+          return createResultError(op, `Redirect response had no Location header (status ${response.status})`)
+        }
+        return createResult({ status: response.status, location })
+      }
+      if (responseType === "redirect" && response.ok) {
+        return createResultError(op, `Expected a redirect, got status ${response.status}`)
       }
 
       if (!response.ok) {
