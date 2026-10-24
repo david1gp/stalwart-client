@@ -42,6 +42,9 @@
     "type-check": "bun --check",
     "check": "bun run format:check && bun run type-check && bun run test",
     "index:generate": "bun scripts/indexGenerate.ts",
+    "registry:generate": "bun scripts/registryTypesGenerate.ts",
+    "registry:verify": "bun scripts/registryTypesVerify.ts",
+    "registry:inventory": "bun scripts/registryInventoryGenerate.ts",
     "clean": "rm -rf ./dist",
     "reset": "rm -rf ./node_modules"
   },

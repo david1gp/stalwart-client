@@ -78,9 +78,11 @@ async function loadReachableCommands(routeMap: RouteMap, path: string[] = []): P
 
 function publicOperations(indexSource: string): readonly string[] {
   const operations: string[] = []
-  const exportPattern = /^export \{ ([A-Za-z0-9_]+) \} from "(?:[^\"]+)"/gm
+  const exportPattern = /^export \{ ([A-Za-z0-9_]+) \} from "([^"]+)"/gm
   for (const match of indexSource.matchAll(exportPattern)) {
     const operation = match[1]
+    // Generated registry metadata (registryObjectTypes, registryViews, …) is data, not an operation.
+    if (match[2]?.startsWith("./registry/generated/")) continue
     if (operation !== undefined && isOperationExport(operation)) operations.push(operation)
   }
   return operations
