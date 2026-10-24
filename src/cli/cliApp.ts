@@ -11,6 +11,11 @@ import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.j
 import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
 import { formsCommands } from "../forms/cli/formsCommands.js"
 import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
+import { systemCommands } from "../registry/system/cli/systemCommands.js"
+import { actionsCommands } from "../registry/actions/cli/actionsCommands.js"
+import { clusterCommands } from "../registry/cluster/cli/clusterCommands.js"
+import { tasksCommands } from "../registry/tasks/cli/tasksCommands.js"
+import { sysGroupwareCommands } from "../registry/sysGroupware/cli/sysGroupwareCommands.js"
 import { spamCommands } from "../registry/spam/cli/spamCommands.js"
 import { sieveCommands } from "../registry/sieve/cli/sieveCommands.js"
 import { lookupCommands } from "../registry/lookups/cli/lookupCommands.js"
@@ -55,6 +60,11 @@ const routes = buildRouteMap({
     reports: reportsCommands,
     telemetry: telemetryCommands,
     storage: storageCommands,
+    system: systemCommands,
+    actions: actionsCommands,
+    cluster: clusterCommands,
+    tasks: tasksCommands,
+    "sys-groupware": sysGroupwareCommands,
     scim: scimCommands,
     "well-known": wellKnownCommands,
     autodiscover: autodiscoverCommands,

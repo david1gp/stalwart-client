@@ -34,6 +34,9 @@ const excludedExports = new Set([
   "registryObjectTypeSchema",
   // transport helper (like jmapHttpRequest), not an operation
   "scimRequest",
+  // constant catalogs (data, not operations)
+  "actionTypes",
+  "dkimSignatureAlgorithms",
   "sseEventsCollect",
   "sseEventsParse",
 ])
