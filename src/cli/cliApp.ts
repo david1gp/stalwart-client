@@ -11,6 +11,13 @@ import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.j
 import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
 import { formsCommands } from "../forms/cli/formsCommands.js"
 import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
+import { mailboxCommands } from "../mailboxes/cli/mailboxCommands.js"
+import { threadCommands } from "../threads/cli/threadCommands.js"
+import { emailCommands } from "../emails/cli/emailCommands.js"
+import { searchSnippetCommands } from "../searchSnippets/cli/searchSnippetCommands.js"
+import { identityCommands } from "../identities/cli/identityCommands.js"
+import { emailSubmissionCommands } from "../emailSubmissions/cli/emailSubmissionCommands.js"
+import { vacationResponseCommands } from "../vacationResponses/cli/vacationResponseCommands.js"
 import { domainsCommands } from "../registry/domains/cli/domainsCommands.js"
 import { mtaCommands } from "../registry/mta/cli/mtaCommands.js"
 import { systemCommands } from "../registry/system/cli/systemCommands.js"
@@ -50,6 +57,13 @@ const routes = buildRouteMap({
     session: sessionCommands,
     jmap: jmapCommands,
     core: coreCommands,
+    mailbox: mailboxCommands,
+    thread: threadCommands,
+    email: emailCommands,
+    snippet: searchSnippetCommands,
+    identity: identityCommands,
+    submission: emailSubmissionCommands,
+    vacation: vacationResponseCommands,
     registry: registryCommands,
     oauth: oauthCommands,
     management: managementCommands,
