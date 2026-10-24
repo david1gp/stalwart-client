@@ -89,6 +89,10 @@ export function jmapMethodCapabilities(methodName: string, ...resolvers: JmapCap
     default:
       break
   }
+  // Method-level extension capabilities (draft-ietf-jmap-calendars / -contacts / -principals).
+  if (methodName === "Principal/getAvailability") using.add(jmapCapabilities.principalsAvailability)
+  if (methodName === "CalendarEvent/parse") using.add(jmapCapabilities.calendarsParse)
+  if (methodName === "ContactCard/parse") using.add(jmapCapabilities.contactsParse)
   for (const resolve of resolvers) {
     const extra = resolve(methodName)
     if (extra !== undefined) {

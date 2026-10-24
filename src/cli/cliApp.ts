@@ -11,6 +11,11 @@ import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.j
 import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
 import { formsCommands } from "../forms/cli/formsCommands.js"
 import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
+import { principalsCommands } from "../principals/cli/principalsCommands.js"
+import { calendarsCommands } from "../calendars/cli/calendarsCommands.js"
+import { calendarEventsCommands } from "../calendarEvents/cli/calendarEventsCommands.js"
+import { calendarEventNotificationsCommands } from "../calendarEventNotifications/cli/calendarEventNotificationsCommands.js"
+import { participantIdentitiesCommands } from "../participantIdentities/cli/participantIdentitiesCommands.js"
 import { sieveScriptsCommands } from "../sieveScripts/cli/sieveScriptsCommands.js"
 import { blobsCommands } from "../blobs/cli/blobsCommands.js"
 import { quotasCommands } from "../quotas/cli/quotasCommands.js"
@@ -53,6 +58,11 @@ const routes = buildRouteMap({
     websocket: webSocketCommands,
     health: healthCommands,
     metrics: metricsCommands,
+    principal: principalsCommands,
+    calendar: calendarsCommands,
+    "calendar-event": calendarEventsCommands,
+    "calendar-event-notification": calendarEventNotificationsCommands,
+    "participant-identity": participantIdentitiesCommands,
   },
   docs: {
     brief: "TypeScript client and CLI for the Stalwart mail server (JMAP + management API)",

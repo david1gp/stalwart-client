@@ -21,6 +21,19 @@ describe("jmapMethodCapabilities derives using arrays", () => {
     if (r.success) expect(r.data).toEqual(["urn:ietf:params:jmap:core"])
   })
 
+  test("parse and availability methods add their method-level extension capabilities", () => {
+    const availability = jmapMethodCapabilities("Principal/getAvailability")
+    expect(availability.success && availability.data).toEqual([
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:principals",
+      "urn:ietf:params:jmap:principals:availability",
+    ])
+    const eventParse = jmapMethodCapabilities("CalendarEvent/parse")
+    expect(eventParse.success && eventParse.data).toContain("urn:ietf:params:jmap:calendars:parse")
+    const cardParse = jmapMethodCapabilities("ContactCard/parse")
+    expect(cardParse.success && cardParse.data).toContain("urn:ietf:params:jmap:contacts:parse")
+  })
+
   test("Email/get adds mail", () => {
     const r = jmapMethodCapabilities("Email/get")
     expect(r.success).toBe(true)
