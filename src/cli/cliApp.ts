@@ -2,6 +2,9 @@ import { buildApplication, buildRouteMap } from "@stricli/core"
 import { PACKAGE_VERSION } from "../client/PACKAGE_VERSION.js"
 import { versionCommand } from "./versionCommand.js"
 import { coreCommands, jmapCommands, sessionCommands } from "../jmap/cli/jmapCommands.js"
+import { liveCommands } from "../live/cli/liveCommands.js"
+import { managementCommands } from "../management/cli/managementCommands.js"
+import { oauthCommands } from "../oauth/cli/oauthCommands.js"
 import { registryCommands } from "../registry/cli/registryCommands.js"
 
 const routes = buildRouteMap({
@@ -11,6 +14,9 @@ const routes = buildRouteMap({
     jmap: jmapCommands,
     core: coreCommands,
     registry: registryCommands,
+    oauth: oauthCommands,
+    management: managementCommands,
+    live: liveCommands,
   },
   docs: {
     brief: "TypeScript client and CLI for the Stalwart mail server (JMAP + management API)",
