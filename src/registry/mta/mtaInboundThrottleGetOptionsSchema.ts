@@ -1,0 +1,12 @@
+import * as a from "valibot"
+import { stalwartClientConfigSchema } from "../../client/stalwartClientConfigSchema.js"
+
+/** Options for `mtaInboundThrottleGet` (`x:MtaInboundThrottle/get`). */
+export const mtaInboundThrottleGetOptionsSchema = a.object({
+  config: stalwartClientConfigSchema,
+  ids: a.optional(a.array(a.string())),
+  properties: a.optional(a.array(a.string())),
+  accountId: a.optional(a.string()),
+})
+
+export type MtaInboundThrottleGetOptions = a.InferInput<typeof mtaInboundThrottleGetOptionsSchema>

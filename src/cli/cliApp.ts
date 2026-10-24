@@ -11,6 +11,8 @@ import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.j
 import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
 import { formsCommands } from "../forms/cli/formsCommands.js"
 import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
+import { domainsCommands } from "../registry/domains/cli/domainsCommands.js"
+import { mtaCommands } from "../registry/mta/cli/mtaCommands.js"
 import { systemCommands } from "../registry/system/cli/systemCommands.js"
 import { actionsCommands } from "../registry/actions/cli/actionsCommands.js"
 import { clusterCommands } from "../registry/cluster/cli/clusterCommands.js"
@@ -53,6 +55,8 @@ const routes = buildRouteMap({
     management: managementCommands,
     live: liveCommands,
     directory: directoryCommands,
+    domains: domainsCommands,
+    mta: mtaCommands,
     spam: spamCommands,
     "sieve-system": sieveCommands,
     lookup: lookupCommands,
