@@ -241,3 +241,28 @@ These rules are non-negotiable (violations can lock everyone out):
 Other agents own `ops/local-stalwart/**`, `e2e/local*` harness files, and
 `docs/local-instance.md` — do not touch those paths or `.env*` files; keep
 `!.env.example` in `.gitignore` so the example stays committable.
+
+## 9. Registry (management) layer — `src/registry/`
+
+Generic ops (done, verified local e2e) — every `x:*` object goes through these:
+
+- `registryGet({config, objectType, ids?, properties?})` → `JmapGetResponse<RegistryObjectMap[T]>`.
+  Singletons: omit `ids` (auto `["singleton"]`; `ids: null` returns an empty list for singletons).
+- `registryQuery({config, objectType, filter?, sort?, position?, limit?, calculateTotal?})` →
+  `JmapQueryResponse`. Refuses singletons client-side. Filter = flat AND record
+  (`{name: "x"}`, `{createdAtIsGreaterThan: "…"}`).
+- `registrySet({config, objectType, create?, update?, destroy?, ifInState?})` →
+  `JmapSetResponse<RegistryCreated>`; any `not*` entry → ResultErr (via `jmapSetErrorCheck`).
+- CLI: `registry types | get | query | set` (`--type Domain --filterJson … --createJson … --updateJson … --destroy a,b`).
+
+Typed per-object helpers (work packages) are **thin wrappers**, one file each, e.g.
+`src/registry/domains/domainQuery.ts` calling `registryQuery({ ..., objectType: "Domain" })`.
+Use the generated `Registry<Name>` / `Registry<Name>Create` types from
+`src/registry/generated/` (regenerate with `bun run registry:generate`, never edit).
+Name collisions with standard JMAP ops (`x:Email`, `x:Calendar`, `x:AddressBook`
+singletons vs `emailGet`/`calendarGet`/`addressBookGet`) → prefix the registry
+side with `sys`: `sysEmailGet`, `sysCalendarSet`, `sysAddressBookGet`.
+
+Gotchas (verified): wire sets/lists are JSON objects (`{"v":true}`, `{"0":{…}}`), not
+arrays; durations are ms numbers; creating a Domain auto-provisions DkimSignature
+objects that block its destroy (`objectIsLinked`) — destroy those first in teardown.

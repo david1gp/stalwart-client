@@ -29,6 +29,9 @@ const excludedExports = new Set([
   "jmapSetErrorCheck",
   "jmapUpload",
   "jmapUrlTemplateFill",
+  // registry internals: helpers, not operations
+  "registryMethodName",
+  "registryObjectTypeSchema",
   "sseEventsCollect",
   "sseEventsParse",
 ])

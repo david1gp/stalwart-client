@@ -67,6 +67,23 @@ export { jmapUrlTemplateFill } from "./jmap/jmapUrlTemplateFill.js"
 export { sseEventsCollect } from "./jmap/sseEventsCollect.js"
 export { sseEventsParse } from "./jmap/sseEventsParse.js"
 
+// registry
+export { REGISTRY_SINGLETON_ID } from "./registry/REGISTRY_SINGLETON_ID.js"
+export type { RegistryCreated } from "./registry/RegistryCreated.js"
+export type { RegistryFilter } from "./registry/registryFilterSchema.js"
+export type { RegistryGetOptions } from "./registry/registryGetOptionsSchema.js"
+export type { RegistryQueryOptions } from "./registry/registryQueryOptionsSchema.js"
+export type { RegistrySetOptions } from "./registry/registrySetOptionsSchema.js"
+export { registryFilterSchema } from "./registry/registryFilterSchema.js"
+export { registryGet } from "./registry/registryGet.js"
+export { registryGetOptionsSchema } from "./registry/registryGetOptionsSchema.js"
+export { registryMethodName } from "./registry/registryMethodName.js"
+export { registryObjectTypeSchema } from "./registry/registryObjectTypeSchema.js"
+export { registryQuery } from "./registry/registryQuery.js"
+export { registryQueryOptionsSchema } from "./registry/registryQueryOptionsSchema.js"
+export { registrySet } from "./registry/registrySet.js"
+export { registrySetOptionsSchema } from "./registry/registrySetOptionsSchema.js"
+
 // registry/generated
 export type { RegistryAccount } from "./registry/generated/RegistryAccount.js"
 export type { RegistryAccountCreate } from "./registry/generated/RegistryAccountCreate.js"
