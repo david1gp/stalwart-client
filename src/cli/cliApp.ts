@@ -11,6 +11,18 @@ import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.j
 import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
 import { formsCommands } from "../forms/cli/formsCommands.js"
 import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
+import { sieveScriptsCommands } from "../sieveScripts/cli/sieveScriptsCommands.js"
+import { blobsCommands } from "../blobs/cli/blobsCommands.js"
+import { quotasCommands } from "../quotas/cli/quotasCommands.js"
+import { pushSubscriptionsCommands } from "../pushSubscriptions/cli/pushSubscriptionsCommands.js"
+import { addressBooksCommands } from "../addressBooks/cli/addressBooksCommands.js"
+import { contactCardsCommands } from "../contactCards/cli/contactCardsCommands.js"
+import { fileNodesCommands } from "../fileNodes/cli/fileNodesCommands.js"
+import { shareNotificationsCommands } from "../shareNotifications/cli/shareNotificationsCommands.js"
+import { eventSourceCommands } from "../eventSource/cli/eventSourceCommands.js"
+import { webSocketCommands } from "../webSocket/cli/webSocketCommands.js"
+import { healthCommands } from "../health/cli/healthCommands.js"
+import { metricsCommands } from "../metrics/cli/metricsCommands.js"
 import { directoryCommands } from "../registry/directory/cli/directoryCommands.js"
 
 const routes = buildRouteMap({
@@ -29,6 +41,18 @@ const routes = buildRouteMap({
     autodiscover: autodiscoverCommands,
     forms: formsCommands,
     "calendar-rsvp": calendarRsvpCommands,
+    sieve: sieveScriptsCommands,
+    blob: blobsCommands,
+    quota: quotasCommands,
+    push: pushSubscriptionsCommands,
+    addressbook: addressBooksCommands,
+    contact: contactCardsCommands,
+    file: fileNodesCommands,
+    share: shareNotificationsCommands,
+    eventsource: eventSourceCommands,
+    websocket: webSocketCommands,
+    health: healthCommands,
+    metrics: metricsCommands,
   },
   docs: {
     brief: "TypeScript client and CLI for the Stalwart mail server (JMAP + management API)",

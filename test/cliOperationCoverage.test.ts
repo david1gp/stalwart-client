@@ -41,6 +41,8 @@ const excludedExports = new Set([
 function isOperationExport(name: string): boolean {
   if (excludedExports.has(name)) return false
   if (name.endsWith("Schema")) return false
+  // accountId resolution helpers are library internals, not operations
+  if (name.endsWith("AccountIdResolve") || name.startsWith("jmapAccountIdFor")) return false
   if (name.endsWith("Options")) return false
   if (name.endsWith("Result")) return false
   if (name.startsWith("Jmap")) return false

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
+import { jmapAccountIdForCapability } from "../src/jmap/jmapAccountIdForCapability.js"
 import { jmapAccountIdResolve } from "../src/jmap/jmapAccountIdResolve.js"
 import { jmapApiUrlResolve } from "../src/jmap/jmapApiUrlResolve.js"
 import { jmapMethodCapabilities, jmapMethodCall, jmapRequest, jmapSetErrorCheck } from "../src/index.js"
@@ -11,6 +12,7 @@ import { jmapTestSessionCreate } from "./jmapTestSession.js"
 
 const config = jmapClientConfig({ baseUrl: "https://mail.example.com", token: "API_x" })
 if (!config.success) throw new Error("fixture config invalid")
+const accountIdConfig = config.data
 
 describe("jmapMethodCapabilities derives using arrays", () => {
   test("Core/echo needs only core", () => {
@@ -232,5 +234,42 @@ describe("jmapSetErrorCheck surfaces partial failures", () => {
       expect(r.errorMessage).toContain("notCreated: c1 (invalidProperties: bad subject)")
       expect(typeof r.errorData).toBe("string")
     }
+  })
+})
+
+describe("jmapAccountIdForCapability resolves the account for a capability", () => {
+  let mock: ReturnType<typeof fetchMockCreate> | undefined
+  afterEach(() => {
+    mock?.restore()
+    mock = undefined
+  })
+
+  test("an explicit accountId wins without fetching the session", async () => {
+    mock = fetchMockCreate(() => fetchMockJson(jmapTestSessionCreate()))
+    const r = await jmapAccountIdForCapability({
+      config: accountIdConfig,
+      capability: "urn:ietf:params:jmap:mail",
+      accountId: "x9",
+    })
+    expect(r.success && r.data.accountId).toBe("x9")
+    expect(mock.requests).toHaveLength(0)
+  })
+
+  test("falls back to the session primary account and returns the session", async () => {
+    mock = fetchMockCreate(() => fetchMockJson(jmapTestSessionCreate()))
+    const session = jmapTestSessionCreate()
+    const expected = session.primaryAccounts["urn:ietf:params:jmap:mail"]
+    const r = await jmapAccountIdForCapability({ config: accountIdConfig, capability: "urn:ietf:params:jmap:mail" })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.accountId).toBe(expected as string)
+      expect(r.data.session).toBeDefined()
+    }
+  })
+
+  test("is a ResultErr when no account serves the capability", async () => {
+    mock = fetchMockCreate(() => fetchMockJson(jmapTestSessionCreate()))
+    const r = await jmapAccountIdForCapability({ config: accountIdConfig, capability: "urn:example:none" })
+    expect(r.success).toBe(false)
   })
 })
