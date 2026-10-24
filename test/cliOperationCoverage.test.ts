@@ -103,8 +103,10 @@ describe("CLI operation coverage", () => {
     ])
     const commandSource = commandSources.map(({ source }) => source).join("\n")
     const operations = publicOperations(indexSource)
+    // An op counts as wired when a Commands module calls it (`op(`) or hands it to a
+    // route builder by reference (`getRoute("…", op)` / `[op, …]`).
     const missingOperations = operations.filter(
-      (operation) => !new RegExp(`\\b${operation}\\s*\\(`).test(commandSource),
+      (operation) => !new RegExp(`\\b${operation}\\s*\\(|[,(\\[]\\s*${operation}\\s*[,)\\]]`).test(commandSource),
     )
     const reachableCommands = await loadReachableCommands(stalwartClientApp.root as unknown as RouteMap)
 

@@ -11,6 +11,13 @@ import { autodiscoverCommands } from "../autodiscover/cli/autodiscoverCommands.j
 import { calendarRsvpCommands } from "../calendarRsvp/cli/calendarRsvpCommands.js"
 import { formsCommands } from "../forms/cli/formsCommands.js"
 import { wellKnownCommands } from "../wellKnown/cli/wellKnownCommands.js"
+import { spamCommands } from "../registry/spam/cli/spamCommands.js"
+import { sieveCommands } from "../registry/sieve/cli/sieveCommands.js"
+import { lookupCommands } from "../registry/lookups/cli/lookupCommands.js"
+import { reportSettingsCommands } from "../registry/reportSettings/cli/reportSettingsCommands.js"
+import { reportsCommands } from "../registry/reports/cli/reportsCommands.js"
+import { telemetryCommands } from "../registry/telemetry/cli/telemetryCommands.js"
+import { storageCommands } from "../registry/storage/cli/storageCommands.js"
 import { principalsCommands } from "../principals/cli/principalsCommands.js"
 import { calendarsCommands } from "../calendars/cli/calendarsCommands.js"
 import { calendarEventsCommands } from "../calendarEvents/cli/calendarEventsCommands.js"
@@ -41,6 +48,13 @@ const routes = buildRouteMap({
     management: managementCommands,
     live: liveCommands,
     directory: directoryCommands,
+    spam: spamCommands,
+    "sieve-system": sieveCommands,
+    lookup: lookupCommands,
+    "report-settings": reportSettingsCommands,
+    reports: reportsCommands,
+    telemetry: telemetryCommands,
+    storage: storageCommands,
     scim: scimCommands,
     "well-known": wellKnownCommands,
     autodiscover: autodiscoverCommands,
