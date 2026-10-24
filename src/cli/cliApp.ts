@@ -6,6 +6,7 @@ import { liveCommands } from "../live/cli/liveCommands.js"
 import { managementCommands } from "../management/cli/managementCommands.js"
 import { oauthCommands } from "../oauth/cli/oauthCommands.js"
 import { registryCommands } from "../registry/cli/registryCommands.js"
+import { directoryCommands } from "../registry/directory/cli/directoryCommands.js"
 
 const routes = buildRouteMap({
   routes: {
@@ -17,6 +18,7 @@ const routes = buildRouteMap({
     oauth: oauthCommands,
     management: managementCommands,
     live: liveCommands,
+    directory: directoryCommands,
   },
   docs: {
     brief: "TypeScript client and CLI for the Stalwart mail server (JMAP + management API)",
