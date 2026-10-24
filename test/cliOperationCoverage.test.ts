@@ -32,6 +32,8 @@ const excludedExports = new Set([
   // registry internals: helpers, not operations
   "registryMethodName",
   "registryObjectTypeSchema",
+  // transport helper (like jmapHttpRequest), not an operation
+  "scimRequest",
   "sseEventsCollect",
   "sseEventsParse",
 ])
