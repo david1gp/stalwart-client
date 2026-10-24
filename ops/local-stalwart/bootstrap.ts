@@ -278,6 +278,30 @@ await jmap(recoveryAuth, [
     },
     "c0",
   ],
+  // Test-only: raise HTTP rate limits and JMAP concurrency so parallel e2e
+  // suites (many suites at once from one IP) are not throttled. Defaults are
+  // 1000/min authenticated, 100/min anonymous, 4 concurrent requests.
+  [
+    "x:Http/set",
+    {
+      accountId: recAccount,
+      update: {
+        singleton: {
+          rateLimitAuthenticated: { count: 100000, period: 60000 },
+          rateLimitAnonymous: { count: 10000, period: 60000 },
+        },
+      },
+    },
+    "c1",
+  ],
+  [
+    "x:Jmap/set",
+    {
+      accountId: recAccount,
+      update: { singleton: { maxConcurrentRequests: 64, maxConcurrentUploads: 32 } },
+    },
+    "c2",
+  ],
 ]);
 
 // 3. Real admin account + password credential + Admin role.

@@ -97,3 +97,6 @@ AGENTS.md
 /public-images
 /public-image-versions
 !.env.example
+
+# orchestration scratch (agent briefs)
+/.work
