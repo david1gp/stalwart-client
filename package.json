@@ -1,16 +1,27 @@
 {
   "name": "@adaptive-ds/stalwart-client",
   "version": "0.1.0",
-  "description": "TypeScript client and CLI for the Stalwart mail server (JMAP + management API). Full API coverage, Result-typed, Valibot-validated.",
+  "description": "Result-based TypeScript client and CLI for the Stalwart mail server — JMAP mail, groupware, and the full management registry.",
   "keywords": [
     "stalwart",
     "jmap",
     "mail",
+    "email",
+    "groupware",
+    "caldav",
+    "carddav",
+    "sieve",
+    "scim",
+    "oauth",
     "api-client",
     "typescript",
-    "cli",
+    "result",
     "valibot",
-    "result"
+    "cli",
+    "bun",
+    "node",
+    "adaptive-ds",
+    "stricli"
   ],
   "homepage": "https://github.com/david1gp/stalwart-client",
   "repository": {
@@ -20,7 +31,16 @@
   "bugs": {
     "url": "https://github.com/david1gp/stalwart-client/issues"
   },
+  "author": {
+    "name": "David Siewert",
+    "url": "https://david-siewert.com/"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/david1gp"
+  },
   "license": "MIT",
+  "readme": "README.md",
   "type": "module",
   "private": false,
   "main": "dist/index.js",
@@ -75,12 +95,23 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./package.json": "./package.json",
+    "./cli.js": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    },
     "./*": {
       "types": "./dist/*.d.ts",
       "import": "./dist/*.js"
     }
   },
   "files": [
-    "dist"
-  ]
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }
