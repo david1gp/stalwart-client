@@ -20,6 +20,18 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install
+      # The registry codegen idempotency test regenerates types from the
+      # Stalwart machine-readable schema at its default location
+      # (~/opensource/stalwart/resources/schema/schema.json.gz). The schema
+      # file itself is AGPL and never vendored, so CI fetches it from the
+      # pinned upstream commit that produced
+      # src/registry/generated/registrySchemaInfo.ts. When re-pinning the
+      # schema, update the commit below, regenerate locally, and commit.
+      - name: Fetch Stalwart schema for codegen test
+        run: |
+          mkdir -p ~/opensource/stalwart/resources/schema
+          curl -fSL -o ~/opensource/stalwart/resources/schema/schema.json.gz \
+            "https://raw.githubusercontent.com/stalwartlabs/stalwart/aa47d8ef/resources/schema/schema.json.gz"
       - name: Verify formatting
         run: bun run format:check
       - name: Build
