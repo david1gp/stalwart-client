@@ -15,6 +15,8 @@ import { sysAddressBookGet } from "../sysAddressBookGet.js"
 import { sysAddressBookSet } from "../sysAddressBookSet.js"
 import { sysCalendarGet } from "../sysCalendarGet.js"
 import { sysCalendarSet } from "../sysCalendarSet.js"
+import { metadataGet } from "../metadataGet.js"
+import { metadataSet } from "../metadataSet.js"
 import { sysEmailGet } from "../sysEmailGet.js"
 import { sysEmailSet } from "../sysEmailSet.js"
 
@@ -105,6 +107,13 @@ export const sysGroupwareCommands = buildRouteMap({
       "Patch the address book server settings singleton",
       (config, properties) => sysAddressBookGet({ config, properties }),
       (config, patch) => sysAddressBookSet({ config, patch }),
+    ),
+    metadata: singletonRoutes(
+      "Object metadata settings (x:Metadata singleton)",
+      "Read the object metadata settings singleton",
+      "Patch the object metadata settings singleton",
+      (config, properties) => metadataGet({ config, properties }),
+      (config, patch) => metadataSet({ config, patch }),
     ),
   },
   docs: { brief: "Groupware server settings (registry system singletons)" },

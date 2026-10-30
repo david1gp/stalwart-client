@@ -35,7 +35,7 @@ export async function actionTroubleshootDmarc(
         remoteIp: parsed.output.remoteIp,
         spfEhloDomain: parsed.output.spfEhloDomain,
         spfMailFromDomain: parsed.output.spfMailFromDomain,
-        to: parsed.output.to,
+        rcptTo: parsed.output.rcptTo,
       },
     },
     ...(parsed.output.accountId !== undefined ? { accountId: parsed.output.accountId } : {}),

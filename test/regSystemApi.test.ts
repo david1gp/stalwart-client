@@ -73,6 +73,8 @@ import { sysCalendarGet } from "../src/registry/sysGroupware/sysCalendarGet.js"
 import { sysCalendarSet } from "../src/registry/sysGroupware/sysCalendarSet.js"
 import { sysEmailGet } from "../src/registry/sysGroupware/sysEmailGet.js"
 import { sysEmailSet } from "../src/registry/sysGroupware/sysEmailSet.js"
+import { metadataGet } from "../src/registry/sysGroupware/metadataGet.js"
+import { metadataSet } from "../src/registry/sysGroupware/metadataSet.js"
 import { tasksCommands } from "../src/registry/tasks/cli/tasksCommands.js"
 import { taskFailedQuery } from "../src/registry/tasks/taskFailedQuery.js"
 import { taskGet } from "../src/registry/tasks/taskGet.js"
@@ -110,22 +112,23 @@ describe("regSystem singleton getters send x:<T>/get with the singleton id", () 
 
   const cases = [
     { label: "systemSettingsGet", fn: systemSettingsGet, method: "x:SystemSettings/get", key: "defaultHostname" },
-    { label: "httpGet", fn: httpGet, method: "x:Http/get", key: "useXForwarded" },
+    { label: "httpGet", fn: httpGet, method: "x:Http/get", key: "clientIpSource" },
     { label: "httpFormGet", fn: httpFormGet, method: "x:HttpForm/get", key: "enable" },
-    { label: "imapGet", fn: imapGet, method: "x:Imap/get", key: "timeoutIdle" },
+    { label: "imapGet", fn: imapGet, method: "x:Imap/get", key: "idleTimeout" },
     { label: "jmapGet", fn: jmapGet, method: "x:Jmap/get", key: "maxRequestSize" },
     { label: "webDavGet", fn: webDavGet, method: "x:WebDav/get", key: "maxResults" },
     { label: "securityGet", fn: securityGet, method: "x:Security/get", key: "scanBanPaths" },
     { label: "sharingGet", fn: sharingGet, method: "x:Sharing/get", key: "maxShares" },
-    { label: "enterpriseGet", fn: enterpriseGet, method: "x:Enterprise/get", key: "logoUrl" },
+    { label: "enterpriseGet", fn: enterpriseGet, method: "x:Enterprise/get", key: "logo" },
     { label: "bootstrapGet", fn: bootstrapGet, method: "x:Bootstrap/get", key: "defaultDomain" },
     { label: "coordinatorGet", fn: coordinatorGet, method: "x:Coordinator/get", key: "@type" },
-    { label: "taskManagerGet", fn: taskManagerGet, method: "x:TaskManager/get", key: "maxAttempts" },
+    { label: "taskManagerGet", fn: taskManagerGet, method: "x:TaskManager/get", key: "alertAfter" },
     { label: "sysEmailGet", fn: sysEmailGet, method: "x:Email/get", key: "maxMessageSize" },
     { label: "sysCalendarGet", fn: sysCalendarGet, method: "x:Calendar/get", key: "maxAttendees" },
     { label: "calendarAlarmGet", fn: calendarAlarmGet, method: "x:CalendarAlarm/get", key: "enable" },
     { label: "calendarSchedulingGet", fn: calendarSchedulingGet, method: "x:CalendarScheduling/get", key: "enable" },
     { label: "sysAddressBookGet", fn: sysAddressBookGet, method: "x:AddressBook/get", key: "maxVCardSize" },
+    { label: "metadataGet", fn: metadataGet, method: "x:Metadata/get", key: "maxEntries" },
   ] as const
 
   for (const { label, fn, method, key } of cases) {
@@ -488,7 +491,7 @@ describe("regSystem actions", () => {
       remoteIp: "192.0.2.10",
       spfEhloDomain: "example.test",
       spfMailFromDomain: "example.test",
-      to: { "bob@example.test": true },
+      rcptTo: { "bob@example.test": true },
     })
     expect(r.success).toBe(true)
     if (r.success) expect(r.data.elapsed).toBe(12)
@@ -687,6 +690,21 @@ describe("regSystem groupware singletons", () => {
     expect(m.sent[0]?.methodCalls[0]?.[0]).toBe("x:Calendar/get")
     const s = await sysCalendarSet({ config: config.data, patch: { maxAttendees: 10 } })
     expect(s.success).toBe(true)
+  })
+
+  test("metadataGet reads x:Metadata and metadataSet patches update.singleton", async () => {
+    const m = regSystemMock(
+      ["x:Metadata/get", { list: [{ id: "singleton", maxEntries: 100 }], notFound: [] }],
+      ["x:Metadata/set", { updated: { singleton: null } }],
+    )
+    mock = m.mock
+    const g = await metadataGet({ config: config.data })
+    expect(g.success).toBe(true)
+    if (g.success) expect(g.data.list[0]?.maxEntries).toBe(100)
+    expect(m.sent[0]?.methodCalls[0]?.[0]).toBe("x:Metadata/get")
+    const s = await metadataSet({ config: config.data, patch: { maxEntries: 200 } })
+    expect(s.success).toBe(true)
+    expect(m.sent[1]?.methodCalls[0]?.[1]).toEqual({ update: { singleton: { maxEntries: 200 } } })
   })
 
   test("calendarAlarmGet reads x:CalendarAlarm and calendarAlarmSet patches it", async () => {

@@ -26,8 +26,8 @@ import { spamClassifierGet } from "../src/registry/spam/spamClassifierGet.js"
 import { spamClassifierSet } from "../src/registry/spam/spamClassifierSet.js"
 import { spamDnsblSettingsGet } from "../src/registry/spam/spamDnsblSettingsGet.js"
 import { spamDnsblSettingsSet } from "../src/registry/spam/spamDnsblSettingsSet.js"
-import { spamLlmGet } from "../src/registry/spam/spamLlmGet.js"
-import { spamLlmSet } from "../src/registry/spam/spamLlmSet.js"
+import { spamAiGet } from "../src/registry/spam/spamAiGet.js"
+import { spamAiSet } from "../src/registry/spam/spamAiSet.js"
 import { spamPyzorGet } from "../src/registry/spam/spamPyzorGet.js"
 import { spamPyzorSet } from "../src/registry/spam/spamPyzorSet.js"
 import { spamSettingsGet } from "../src/registry/spam/spamSettingsGet.js"
@@ -658,13 +658,13 @@ describe("reg-filtering singleton get", () => {
     expect(m.sent[0]?.methodCalls[0]?.[1]).toEqual({ ids: ["singleton"] })
   })
 
-  test('spamLlm sends x:SpamLlm/get with ids ["singleton"]', async () => {
-    const m = mockMethod("x:SpamLlm/get", { list: [{ id: "singleton" }], notFound: [] })
+  test('spamAi sends x:SpamAi/get with ids ["singleton"]', async () => {
+    const m = mockMethod("x:SpamAi/get", { list: [{ id: "singleton" }], notFound: [] })
     mock = m.mock
-    const r = await spamLlmGet({ config: config.data })
+    const r = await spamAiGet({ config: config.data })
     expect(r.success).toBe(true)
     expect(m.sent[0]?.using).toEqual(USING)
-    expect(m.sent[0]?.methodCalls[0]?.[0]).toBe("x:SpamLlm/get")
+    expect(m.sent[0]?.methodCalls[0]?.[0]).toBe("x:SpamAi/get")
     expect(m.sent[0]?.methodCalls[0]?.[1]).toEqual({ ids: ["singleton"] })
   })
 
@@ -838,19 +838,19 @@ describe("reg-filtering singleton set", () => {
     }
   })
 
-  test("spamLlm sends x:SpamLlm/set update for the singleton", async () => {
-    const m = mockMethod("x:SpamLlm/set", { updated: { singleton: null } })
+  test("spamAi sends x:SpamAi/set update for the singleton", async () => {
+    const m = mockMethod("x:SpamAi/set", { updated: { singleton: null } })
     mock = m.mock
-    const r = await spamLlmSet({ config: config.data, update: { singleton: { note: "x" } } })
+    const r = await spamAiSet({ config: config.data, update: { singleton: { note: "x" } } })
     expect(r.success).toBe(true)
     expect(m.sent[0]?.using).toEqual(USING)
-    expect(m.sent[0]?.methodCalls[0]).toEqual(["x:SpamLlm/set", { update: { singleton: { note: "x" } } }, "c1"])
+    expect(m.sent[0]?.methodCalls[0]).toEqual(["x:SpamAi/set", { update: { singleton: { note: "x" } } }, "c1"])
   })
 
-  test("spamLlm turns a notUpdated entry into a ResultErr", async () => {
-    const m = mockMethod("x:SpamLlm/set", { notUpdated: { singleton: { type: "forbidden", description: "no" } } })
+  test("spamAi turns a notUpdated entry into a ResultErr", async () => {
+    const m = mockMethod("x:SpamAi/set", { notUpdated: { singleton: { type: "forbidden", description: "no" } } })
     mock = m.mock
-    const r = await spamLlmSet({ config: config.data, update: { singleton: { note: "x" } } })
+    const r = await spamAiSet({ config: config.data, update: { singleton: { note: "x" } } })
     expect(r.success).toBe(false)
     if (!r.success) {
       expect(r.op).toBe("registrySet")

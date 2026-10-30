@@ -9,8 +9,8 @@ export const actionTroubleshootDmarcOptionsSchema = a.object({
   remoteIp: a.pipe(a.string(), a.minLength(1)),
   spfEhloDomain: a.pipe(a.string(), a.minLength(1)),
   spfMailFromDomain: a.pipe(a.string(), a.minLength(1)),
-  /** RCPT TO addresses as a set (`{"user@example.test": true}`). */
-  to: a.record(a.string(), a.literal(true)),
+  /** RCPT TO addresses as a set (`{"user@example.test": true}`). Renamed from `to` in Stalwart v1. */
+  rcptTo: a.record(a.string(), a.literal(true)),
   accountId: a.optional(a.string()),
 })
 

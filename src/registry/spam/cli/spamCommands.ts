@@ -13,8 +13,8 @@ import { spamDnsblSettingsGet } from "../spamDnsblSettingsGet.js"
 import { spamDnsblSettingsSet } from "../spamDnsblSettingsSet.js"
 import { spamFileExtensionGet } from "../spamFileExtensionGet.js"
 import { spamFileExtensionSet } from "../spamFileExtensionSet.js"
-import { spamLlmGet } from "../spamLlmGet.js"
-import { spamLlmSet } from "../spamLlmSet.js"
+import { spamAiGet } from "../spamAiGet.js"
+import { spamAiSet } from "../spamAiSet.js"
 import { spamPyzorGet } from "../spamPyzorGet.js"
 import { spamPyzorSet } from "../spamPyzorSet.js"
 import { spamRuleGet } from "../spamRuleGet.js"
@@ -256,9 +256,9 @@ const spamFileExtensionSetCommand = buildCommand({
   docs: { brief: "x:SpamFileExtension/set — create, update and/or destroy SpamFileExtension objects" },
 })
 
-const spamLlmGetCommand = buildCommand({
+const spamAiGetCommand = buildCommand({
   async func(this: CommandContext, flags: CliConfigFlags & { properties?: string[] }) {
-    await cliRunApi(this, flags, (config) => spamLlmGet({ config, properties: flags.properties }))
+    await cliRunApi(this, flags, (config) => spamAiGet({ config, properties: flags.properties }))
   },
   parameters: {
     flags: {
@@ -266,15 +266,15 @@ const spamLlmGetCommand = buildCommand({
       properties: cliScalarFlagParams.optionalStringList("Comma-separated properties to return"),
     },
   },
-  docs: { brief: "x:SpamLlm/get — fetch SpamLlm (singletons: the singleton)" },
+  docs: { brief: "x:SpamAi/get — fetch SpamAi (singletons: the singleton)" },
 })
 
-const spamLlmSetCommand = buildCommand({
+const spamAiSetCommand = buildCommand({
   async func(this: CommandContext, flags: CliConfigFlags & { updateJson: string }) {
-    const op = "spamLlmSet"
+    const op = "spamAiSet"
     const update = flagJson(op, "updateJson", flags.updateJson)
     await cliRunApi(this, flags, (config) =>
-      spamLlmSet({
+      spamAiSet({
         config,
         update: update as Record<string, Record<string, unknown>>,
       }),
@@ -286,7 +286,7 @@ const spamLlmSetCommand = buildCommand({
       updateJson: cliScalarFlagParams.requiredString('Update as JSON: {"singleton": {"prop": value}}'),
     },
   },
-  docs: { brief: "x:SpamLlm/set — update the SpamLlm singleton" },
+  docs: { brief: "x:SpamAi/set — update the SpamAi singleton" },
 })
 
 const spamPyzorGetCommand = buildCommand({
@@ -713,9 +713,9 @@ const spamFileExtensionSubCommands = buildRouteMap({
   docs: { brief: "SpamFileExtension objects" },
 })
 
-const spamLlmSubCommands = buildRouteMap({
-  routes: { get: spamLlmGetCommand, set: spamLlmSetCommand },
-  docs: { brief: "SpamLlm objects" },
+const spamAiSubCommands = buildRouteMap({
+  routes: { get: spamAiGetCommand, set: spamAiSetCommand },
+  docs: { brief: "SpamAi objects" },
 })
 
 const spamPyzorSubCommands = buildRouteMap({
@@ -773,7 +773,7 @@ export const spamCommands = buildRouteMap({
     "dnsbl-server": spamDnsblServerSubCommands,
     "dnsbl-settings": spamDnsblSettingsSubCommands,
     "file-extension": spamFileExtensionSubCommands,
-    llm: spamLlmSubCommands,
+    ai: spamAiSubCommands,
     pyzor: spamPyzorSubCommands,
     rule: spamRuleSubCommands,
     settings: spamSettingsSubCommands,

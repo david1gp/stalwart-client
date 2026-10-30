@@ -27,6 +27,9 @@ import { fileStorageGet } from "../src/registry/storage/fileStorageGet.js"
 import { fileStorageSet } from "../src/registry/storage/fileStorageSet.js"
 import { inMemoryStoreGet } from "../src/registry/storage/inMemoryStoreGet.js"
 import { inMemoryStoreSet } from "../src/registry/storage/inMemoryStoreSet.js"
+import { indexQueueStatusGet } from "../src/registry/storage/indexQueueStatusGet.js"
+import { indexQueueStatusQuery } from "../src/registry/storage/indexQueueStatusQuery.js"
+import { indexQueueStatusSet } from "../src/registry/storage/indexQueueStatusSet.js"
 import { logGet } from "../src/registry/telemetry/logGet.js"
 import { logQuery } from "../src/registry/telemetry/logQuery.js"
 import { metricGet } from "../src/registry/telemetry/metricGet.js"
@@ -496,6 +499,33 @@ describe("reg-data storage: archived items and store singletons", () => {
       () => archivedItemSet({ config: config.data, destroy: ["i1"] }),
       "x:ArchivedItem/set",
       { destroy: ["i1"] },
+    )
+  })
+
+  test("indexQueueStatusGet fetches a queue state by id", async () => {
+    await expectWireCall(
+      "index queue get",
+      () => indexQueueStatusGet({ config: config.data, ids: ["q1"] }),
+      "x:IndexQueueStatus/get",
+      { ids: ["q1"] },
+    )
+  })
+
+  test("indexQueueStatusQuery filters by index", async () => {
+    await expectWireCall(
+      "index queue query",
+      () => indexQueueStatusQuery({ config: config.data, filter: { index: "Email" } }),
+      "x:IndexQueueStatus/query",
+      { filter: { index: "Email" } },
+    )
+  })
+
+  test("indexQueueStatusSet updates a queue entry", async () => {
+    await expectWireCall(
+      "index queue set",
+      () => indexQueueStatusSet({ config: config.data, update: { q1: { status: "Idle" } } }),
+      "x:IndexQueueStatus/set",
+      { update: { q1: { status: "Idle" } } },
     )
   })
 

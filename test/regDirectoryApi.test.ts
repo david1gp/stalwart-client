@@ -53,6 +53,10 @@ import { oauthClientGet } from "../src/registry/directory/oauthClientGet.js"
 import { oauthClientQuery } from "../src/registry/directory/oauthClientQuery.js"
 import { oauthClientSet } from "../src/registry/directory/oauthClientSet.js"
 import { oauthClientUpdate } from "../src/registry/directory/oauthClientUpdate.js"
+import { oauthGrantDestroy } from "../src/registry/directory/oauthGrantDestroy.js"
+import { oauthGrantGet } from "../src/registry/directory/oauthGrantGet.js"
+import { oauthGrantQuery } from "../src/registry/directory/oauthGrantQuery.js"
+import { oauthGrantSet } from "../src/registry/directory/oauthGrantSet.js"
 import { oidcProviderGet } from "../src/registry/directory/oidcProviderGet.js"
 import { oidcProviderUpdate } from "../src/registry/directory/oidcProviderUpdate.js"
 import { publicKeyCreate } from "../src/registry/directory/publicKeyCreate.js"
@@ -115,6 +119,7 @@ describe("directory get wrappers send x:<Type>/get with ids", () => {
     { label: "tenantGet", fn: asOp(tenantGet), method: "x:Tenant/get" },
     { label: "mailingListGet", fn: asOp(mailingListGet), method: "x:MailingList/get" },
     { label: "oauthClientGet", fn: asOp(oauthClientGet), method: "x:OAuthClient/get" },
+    { label: "oauthGrantGet", fn: asOp(oauthGrantGet), method: "x:OAuthGrant/get" },
     { label: "apiKeyGet", fn: asOp(apiKeyGet), method: "x:ApiKey/get" },
     { label: "appPasswordGet", fn: asOp(appPasswordGet), method: "x:AppPassword/get" },
     { label: "maskedEmailGet", fn: asOp(maskedEmailGet), method: "x:MaskedEmail/get" },
@@ -165,6 +170,7 @@ describe("directory query wrappers send x:<Type>/query", () => {
     { label: "tenantQuery", fn: asOp(tenantQuery), method: "x:Tenant/query" },
     { label: "mailingListQuery", fn: asOp(mailingListQuery), method: "x:MailingList/query" },
     { label: "oauthClientQuery", fn: asOp(oauthClientQuery), method: "x:OAuthClient/query" },
+    { label: "oauthGrantQuery", fn: asOp(oauthGrantQuery), method: "x:OAuthGrant/query" },
     { label: "apiKeyQuery", fn: asOp(apiKeyQuery), method: "x:ApiKey/query" },
     { label: "appPasswordQuery", fn: asOp(appPasswordQuery), method: "x:AppPassword/query" },
     { label: "maskedEmailQuery", fn: asOp(maskedEmailQuery), method: "x:MaskedEmail/query" },
@@ -213,6 +219,7 @@ describe("directory set wrappers create through x:<Type>/set", () => {
     { label: "tenantSet", fn: asOp(tenantSet), method: "x:Tenant/set" },
     { label: "mailingListSet", fn: asOp(mailingListSet), method: "x:MailingList/set" },
     { label: "oauthClientSet", fn: asOp(oauthClientSet), method: "x:OAuthClient/set" },
+    { label: "oauthGrantSet", fn: asOp(oauthGrantSet), method: "x:OAuthGrant/set" },
     { label: "apiKeySet", fn: asOp(apiKeySet), method: "x:ApiKey/set" },
     { label: "appPasswordSet", fn: asOp(appPasswordSet), method: "x:AppPassword/set" },
     { label: "maskedEmailSet", fn: asOp(maskedEmailSet), method: "x:MaskedEmail/set" },
@@ -372,6 +379,7 @@ describe("directory focused create/update/destroy helpers", () => {
     { label: "tenantDestroy", fn: asOp(tenantDestroy), method: "x:Tenant/set" },
     { label: "mailingListDestroy", fn: asOp(mailingListDestroy), method: "x:MailingList/set" },
     { label: "oauthClientDestroy", fn: asOp(oauthClientDestroy), method: "x:OAuthClient/set" },
+    { label: "oauthGrantDestroy", fn: asOp(oauthGrantDestroy), method: "x:OAuthGrant/set" },
     { label: "apiKeyDestroy", fn: asOp(apiKeyDestroy), method: "x:ApiKey/set" },
     { label: "appPasswordDestroy", fn: asOp(appPasswordDestroy), method: "x:AppPassword/set" },
     { label: "maskedEmailDestroy", fn: asOp(maskedEmailDestroy), method: "x:MaskedEmail/set" },

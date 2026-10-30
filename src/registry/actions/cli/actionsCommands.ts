@@ -113,7 +113,7 @@ const troubleshootDmarcCommand = buildCommand({
       remoteIp: string
       spfEhloDomain: string
       spfMailFromDomain: string
-      to: string
+      rcptTo: string
     },
   ) {
     await cliRunApi(this, flags, (config) =>
@@ -125,7 +125,7 @@ const troubleshootDmarcCommand = buildCommand({
         remoteIp: flags.remoteIp,
         spfEhloDomain: flags.spfEhloDomain,
         spfMailFromDomain: flags.spfMailFromDomain,
-        to: addressSetList(flags.to),
+        rcptTo: addressSetList(flags.rcptTo),
       }),
     )
   },
@@ -138,7 +138,7 @@ const troubleshootDmarcCommand = buildCommand({
       remoteIp: cliScalarFlagParams.requiredString("Remote IP of the SMTP client"),
       spfEhloDomain: cliScalarFlagParams.requiredString("Domain for the EHLO SPF check"),
       spfMailFromDomain: cliScalarFlagParams.requiredString("Domain for the MAIL FROM SPF check"),
-      to: cliScalarFlagParams.requiredString("Comma-separated RCPT TO addresses"),
+      rcptTo: cliScalarFlagParams.requiredString("Comma-separated RCPT TO addresses"),
     },
   },
   docs: { brief: "Run DMARC troubleshooting diagnostics (local domain only)" },

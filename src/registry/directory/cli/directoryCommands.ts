@@ -35,6 +35,10 @@ import { oauthClientSet } from "../oauthClientSet.js"
 import { oauthClientCreate } from "../oauthClientCreate.js"
 import { oauthClientUpdate } from "../oauthClientUpdate.js"
 import { oauthClientDestroy } from "../oauthClientDestroy.js"
+import { oauthGrantGet } from "../oauthGrantGet.js"
+import { oauthGrantQuery } from "../oauthGrantQuery.js"
+import { oauthGrantSet } from "../oauthGrantSet.js"
+import { oauthGrantDestroy } from "../oauthGrantDestroy.js"
 import { apiKeyGet } from "../apiKeyGet.js"
 import { apiKeyQuery } from "../apiKeyQuery.js"
 import { apiKeySet } from "../apiKeySet.js"
@@ -689,6 +693,91 @@ const oauthClientDestroyCommand = buildCommand({
     },
   },
   docs: { brief: "x:OAuthClient/set — destroy one OAuthClient entry" },
+})
+
+const oauthGrantGetCommand = buildCommand({
+  async func(this: CommandContext, flags: CliConfigFlags & { ids?: string[]; properties?: string[] }) {
+    await cliRunApi(this, flags, (config) => oauthGrantGet({ config, ids: flags.ids, properties: flags.properties }))
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      ids: cliScalarFlagParams.optionalStringList("Comma-separated ids (default: all)"),
+      properties: cliScalarFlagParams.optionalStringList("Comma-separated properties to return"),
+    },
+  },
+  docs: { brief: "x:OAuthGrant/get — fetch OAuth authorizations (connected applications)" },
+})
+
+const oauthGrantQueryCommand = buildCommand({
+  async func(
+    this: CommandContext,
+    flags: CliConfigFlags & { filterJson?: string; sortJson?: string; limit?: number; position?: number },
+  ) {
+    const op = "oauthGrantQuery"
+    const filter = jsonFlagRead(op, "filterJson", flags.filterJson)
+    const sort = jsonFlagRead(op, "sortJson", flags.sortJson)
+    await cliRunApi(this, flags, (config) =>
+      oauthGrantQuery({
+        config,
+        filter: filter as Record<string, string | number | boolean | null> | undefined,
+        sort: sort as unknown as { property: string; isAscending?: boolean }[] | undefined,
+        limit: flags.limit,
+        position: flags.position,
+      }),
+    )
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      filterJson: cliScalarFlagParams.optionalString('Filter as JSON, e.g. {"accountId":"alice"}'),
+      sortJson: cliScalarFlagParams.optionalString('Sort as JSON array, e.g. [{"property":"createdAt"}]'),
+      limit: cliScalarFlagParams.optionalNumber("Max ids to return"),
+      position: cliScalarFlagParams.optionalNumber("Zero-based start position"),
+    },
+  },
+  docs: { brief: "x:OAuthGrant/query — list OAuth authorization ids" },
+})
+
+const oauthGrantSetCommand = buildCommand({
+  async func(
+    this: CommandContext,
+    flags: CliConfigFlags & { createJson?: string; updateJson?: string; destroy?: string[] },
+  ) {
+    const op = "oauthGrantSet"
+    const create = jsonFlagRead(op, "createJson", flags.createJson)
+    const update = jsonFlagRead(op, "updateJson", flags.updateJson)
+    await cliRunApi(this, flags, (config) =>
+      oauthGrantSet({
+        config,
+        create: create as Record<string, Record<string, unknown>> | undefined,
+        update: update as Record<string, Record<string, unknown>> | undefined,
+        destroy: flags.destroy,
+      }),
+    )
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      createJson: cliScalarFlagParams.optionalString('Creations as JSON: {"<creationId>": {…object…}}'),
+      updateJson: cliScalarFlagParams.optionalString('Updates as JSON: {"<id>": {…patch…}}'),
+      destroy: cliScalarFlagParams.optionalStringList("Comma-separated ids to destroy (revoke)"),
+    },
+  },
+  docs: { brief: "x:OAuthGrant/set — create, update and/or destroy (revoke) OAuth authorizations" },
+})
+
+const oauthGrantDestroyCommand = buildCommand({
+  async func(this: CommandContext, flags: CliConfigFlags & { id: string }) {
+    await cliRunApi(this, flags, (config) => oauthGrantDestroy({ config, id: flags.id }))
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      id: cliScalarFlagParams.requiredString("OAuthGrant entry id"),
+    },
+  },
+  docs: { brief: "x:OAuthGrant/set — revoke one OAuth authorization (sign the app out)" },
 })
 
 const apiKeyGetCommand = buildCommand({
@@ -1686,6 +1775,15 @@ export const directoryCommands = buildRouteMap({
         destroy: oauthClientDestroyCommand,
       },
       docs: { brief: "Directory OAuthClient entries" },
+    }),
+    "oauth-grant": buildRouteMap({
+      routes: {
+        get: oauthGrantGetCommand,
+        query: oauthGrantQueryCommand,
+        set: oauthGrantSetCommand,
+        destroy: oauthGrantDestroyCommand,
+      },
+      docs: { brief: "OAuth authorizations granted to applications (connected apps)" },
     }),
     "api-key": buildRouteMap({
       routes: {

@@ -20,6 +20,9 @@ import { fileStorageGet } from "../fileStorageGet.js"
 import { fileStorageSet } from "../fileStorageSet.js"
 import { inMemoryStoreGet } from "../inMemoryStoreGet.js"
 import { inMemoryStoreSet } from "../inMemoryStoreSet.js"
+import { indexQueueStatusGet } from "../indexQueueStatusGet.js"
+import { indexQueueStatusQuery } from "../indexQueueStatusQuery.js"
+import { indexQueueStatusSet } from "../indexQueueStatusSet.js"
 import type { RegistryFilter } from "../../registryFilterSchema.js"
 import { searchGet } from "../searchGet.js"
 import { searchSet } from "../searchSet.js"
@@ -250,6 +253,14 @@ export const storageCommands = buildRouteMap({
         set: singletonSetRoute("x:DataRetention/set — update the data retention singleton", dataRetentionSet),
       },
       docs: { brief: "Data retention policies (singleton)" },
+    }),
+    "index-queue": buildRouteMap({
+      routes: {
+        get: getRoute("x:IndexQueueStatus/get — fetch search index queue states", indexQueueStatusGet),
+        query: queryRoute("x:IndexQueueStatus/query — list index queue ids", indexQueueStatusQuery),
+        set: setRoute("x:IndexQueueStatus/set — manage index queues", indexQueueStatusSet),
+      },
+      docs: { brief: "Search index queues (per-index, per-partition status)" },
     }),
   },
   docs: { brief: "Storage: archived items and store/index/retention singletons" },
