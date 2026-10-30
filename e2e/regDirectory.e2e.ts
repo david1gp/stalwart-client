@@ -432,15 +432,15 @@ describe("e2e directory: singletons, enterprise pins and external directories", 
       const before = await authenticationGet({ config })
       requireSuccess(before, "authentication get")
       if (!before.success) throw new Error("unreachable")
-      const original = before.data.list[0]?.passwordMinLength as number
+      const original = before.data.list[0]?.minPasswordLength as number
       expect(original).toBeNumber()
-      const bumped = await authenticationUpdate({ config, patch: { passwordMinLength: original + 1 } })
+      const bumped = await authenticationUpdate({ config, patch: { minPasswordLength: original + 1 } })
       requireSuccess(bumped, "authentication update")
-      const mid = await authenticationGet({ config, properties: ["passwordMinLength"] })
+      const mid = await authenticationGet({ config, properties: ["minPasswordLength"] })
       requireSuccess(mid, "authentication re-get")
       if (!mid.success) throw new Error("unreachable")
-      expect(mid.data.list[0]?.passwordMinLength).toBe(original + 1)
-      const restored = await authenticationUpdate({ config, patch: { passwordMinLength: original } })
+      expect(mid.data.list[0]?.minPasswordLength).toBe(original + 1)
+      const restored = await authenticationUpdate({ config, patch: { minPasswordLength: original } })
       requireSuccess(restored, "authentication restore")
     },
     { timeout: 30_000 },
@@ -452,15 +452,15 @@ describe("e2e directory: singletons, enterprise pins and external directories", 
       const before = await oidcProviderGet({ config })
       requireSuccess(before, "oidc provider get")
       if (!before.success) throw new Error("unreachable")
-      const original = before.data.list[0]?.authCodeMaxAttempts as number
+      const original = before.data.list[0]?.accessTokenExpiry as number
       expect(original).toBeNumber()
-      const bumped = await oidcProviderUpdate({ config, patch: { authCodeMaxAttempts: original + 1 } })
+      const bumped = await oidcProviderUpdate({ config, patch: { accessTokenExpiry: original + 1 } })
       requireSuccess(bumped, "oidc provider update")
-      const mid = await oidcProviderGet({ config, properties: ["authCodeMaxAttempts"] })
+      const mid = await oidcProviderGet({ config, properties: ["accessTokenExpiry"] })
       requireSuccess(mid, "oidc provider re-get")
       if (!mid.success) throw new Error("unreachable")
-      expect(mid.data.list[0]?.authCodeMaxAttempts).toBe(original + 1)
-      const restored = await oidcProviderUpdate({ config, patch: { authCodeMaxAttempts: original } })
+      expect(mid.data.list[0]?.accessTokenExpiry).toBe(original + 1)
+      const restored = await oidcProviderUpdate({ config, patch: { accessTokenExpiry: original } })
       requireSuccess(restored, "oidc provider restore")
     },
     { timeout: 30_000 },

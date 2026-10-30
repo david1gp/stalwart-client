@@ -218,7 +218,7 @@ describe("e2e reg-domains: domain lifecycle", () => {
       const g = await domainGet({ config, ids: [created.domainId as string] })
       if (!g.success) fail("domainGet failed", g)
       expect(g.data.list[0]?.name).toBe(domainName)
-      expect(g.data.list[0]?.isEnabled).toBe(true)
+      expect(g.data.list[0]?.enable).toBe(true)
     },
     { timeout: 30_000 },
   )
@@ -461,7 +461,7 @@ describe("e2e reg-mta: object lifecycles", () => {
           create: async (n) => {
             const r = await mtaConnectionStrategySet({
               config,
-              create: { c1: { name: n, sourceIps: { "0": { sourceIp: "127.0.0.1", ehloHostname: null } } } },
+              create: { c1: { name: n, localIps: { "0": { localIp: "127.0.0.1", ehloHostname: null } } } },
             })
             if (!r.success) return r
             return { success: true as const, data: { id: r.data.created?.c1?.id } }
@@ -508,13 +508,13 @@ describe("e2e reg-mta: object lifecycles", () => {
           create: async () => {
             const r = await mtaMilterSet({
               config,
-              create: { c1: { allowInvalidCerts: false, hostname: "127.0.0.1", useTls: false } },
+              create: { c1: { allowInvalidCerts: false, host: "127.0.0.1", useTls: false } },
             })
             if (!r.success) return r
             return { success: true as const, data: { id: r.data.created?.c1?.id } }
           },
           read: async (id) => mtaMilterGet({ config, ids: [id] }),
-          update: async (id) => mtaMilterSet({ config, update: { [id]: { timeoutData: 60001 } } }),
+          update: async (id) => mtaMilterSet({ config, update: { [id]: { dataTimeout: 60001 } } }),
         },
         {
           label: "MtaOutboundThrottle",
@@ -933,8 +933,18 @@ describe("e2e reg-mta: listeners and queue", () => {
           if (contents.success) expect(contents.data).toContain(subject)
           // else already drained mid-test; fall through to the pins below.
         }
-        const cancel = await queuedMessageCancel({ config, id: queuedId })
-        if (!cancel.success && !cancel.errorMessage.includes("notFound")) fail("queuedMessageCancel failed", cancel)
+        // The queue may hold the delivery lock ("being delivered or modified,
+        // retry later"): retry the cancel until it lands, drains, or errors
+        // any other way.
+        for (let attempt = 0; ; attempt++) {
+          const cancel = await queuedMessageCancel({ config, id: queuedId })
+          if (cancel.success || cancel.errorMessage.includes("notFound")) break
+          if (cancel.errorMessage.includes("retry later") && attempt < 5) {
+            await Bun.sleep(1000)
+            continue
+          }
+          fail("queuedMessageCancel failed", cancel)
+        }
         created.queuedId = undefined
       }
       // Pin the missing-id contract on a certainly-absent id. It must be

@@ -161,7 +161,8 @@ describe("e2e http-misc: mta-sts, user-agent config, autoconfig", () => {
       if (!mail.success) throw new Error(`autoconfigMailConfig failed: ${mail.errorMessage}`)
       for (const doc of [v1.data.autoconfig, tb.data.autoconfig, mail.data.autoconfig]) {
         expect(doc.domain).toBe("example.test")
-        expect(doc.displayName).toBe(userEmail)
+        // v1 renders the domain as displayName (0.16 rendered the email address).
+        expect(doc.displayName).toBe("example.test")
         expect(doc.incomingServers.length).toBeGreaterThan(0)
         expect(doc.outgoingServers.length).toBeGreaterThan(0)
         expect(doc.clientConfigUpdateUrl ?? "").toContain("config-v1.1.xml")

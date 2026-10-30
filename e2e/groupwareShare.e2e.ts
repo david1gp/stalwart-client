@@ -294,7 +294,7 @@ describe("e2e groupware-share: quota and push as alice", () => {
         },
       })
       expect(s.success).toBe(false)
-      if (!s.success) expect(s.errorMessage).toContain("Push subscription URLs must use the https scheme.")
+      if (!s.success) expect(s.errorMessage).toContain("URL must use the https scheme")
     },
     { timeout: 30_000 },
   )
@@ -389,7 +389,7 @@ describe("e2e groupware-share: address book share alice to bob", () => {
     async () => {
       const s = await fileNodeSet({
         config: alice,
-        create: { f1: { name: `e2e-${runId}.txt`, blobId: created.blobId as string } },
+        create: { f1: { "@type": "File", name: `e2e-${runId}.txt`, blobId: created.blobId as string } },
       })
       mustSuccess(s, "file create")
       created.fileId = s.data.created?.f1?.id as string
@@ -397,6 +397,7 @@ describe("e2e groupware-share: address book share alice to bob", () => {
       const g = await fileNodeGet({ config: alice, ids: [created.fileId as string] })
       mustSuccess(g, "file get")
       expect(g.data.list[0]?.name).toBe(`e2e-${runId}.txt`)
+      expect(g.data.list[0]?.["@type"]).toBe("File")
       const q = await fileNodeQuery({ config: alice })
       mustSuccess(q, "file query")
       expect(q.data.ids.map(String)).toContain(created.fileId as string)

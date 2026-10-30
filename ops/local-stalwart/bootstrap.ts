@@ -28,124 +28,120 @@
 // accounts) and recovery mode is the documented path for initial setup
 // (see docs/local-instance.md).
 
-const BASE_URL = must("STALWART_BASE_URL");
-const RT = must("STALWART_RT");
-const CONTAINER = must("STALWART_CONTAINER_NAME");
-const IMAGE = must("STALWART_IMAGE");
-const HTTP_PORT = must("STALWART_HTTP_PORT");
-const SMTP_PORT = process.env.STALWART_SMTP_PORT ?? "10025";
-const IMAP_PORT = process.env.STALWART_IMAP_PORT ?? "10143";
-const OPS_DIR = process.env.STALWART_OPS_DIR ?? "ops/local-stalwart";
+const BASE_URL = must("STALWART_BASE_URL")
+const RT = must("STALWART_RT")
+const CONTAINER = must("STALWART_CONTAINER_NAME")
+const IMAGE = must("STALWART_IMAGE")
+const HTTP_PORT = must("STALWART_HTTP_PORT")
+const SMTP_PORT = process.env.STALWART_SMTP_PORT ?? "10025"
+const IMAP_PORT = process.env.STALWART_IMAP_PORT ?? "10143"
+const OPS_DIR = process.env.STALWART_OPS_DIR ?? "ops/local-stalwart"
 
-export {};
-const RECOVERY_PASSWORD = must("STALWART_RECOVERY_PASSWORD");
-const KEEP_MODE = process.argv.includes("--keep");
+export {}
+const RECOVERY_PASSWORD = must("STALWART_RECOVERY_PASSWORD")
+const KEEP_MODE = process.argv.includes("--keep")
 
-const DOMAIN = "example.test";
-const HOSTNAME = "mail.example.test";
-const ADMIN_USER = "admin";
-const ADMIN_PASSWORD = randomPassword(24);
-const USER_A = "alice";
-const USER_A_PASSWORD = randomPassword(16);
-const USER_B = "bob";
-const USER_B_PASSWORD = randomPassword(16);
+const DOMAIN = "example.test"
+const HOSTNAME = "mail.example.test"
+const ADMIN_USER = "admin"
+const ADMIN_PASSWORD = randomPassword(24)
+const USER_A = "alice"
+const USER_A_PASSWORD = randomPassword(16)
+const USER_B = "bob"
+const USER_B_PASSWORD = randomPassword(16)
 
 function must(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`missing env ${name} (run via start.sh)`);
-  return v;
+  const v = process.env[name]
+  if (!v) throw new Error(`missing env ${name} (run via start.sh)`)
+  return v
 }
 
 function randomPassword(n: number): string {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const buf = new Uint8Array(n);
-  crypto.getRandomValues(buf);
-  return Array.from(buf, (b) => chars[b % chars.length]).join("");
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  const buf = new Uint8Array(n)
+  crypto.getRandomValues(buf)
+  return Array.from(buf, (b) => chars[b % chars.length]).join("")
 }
 
 function basic(user: string, pass: string): string {
-  return "Basic " + Buffer.from(`${user}:${pass}`).toString("base64");
+  return "Basic " + Buffer.from(`${user}:${pass}`).toString("base64")
 }
 
 async function sleep(ms: number): Promise<void> {
-  await new Promise((r) => setTimeout(r, ms));
+  await new Promise((r) => setTimeout(r, ms))
 }
 
 async function waitForHealth(timeoutMs = 120_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = Date.now() + timeoutMs
   for (;;) {
     try {
-      const res = await fetch(`${BASE_URL}/healthz/ready`);
-      if (res.ok) return;
+      const res = await fetch(`${BASE_URL}/healthz/ready`)
+      if (res.ok) return
     } catch {
       // not up yet
     }
     if (Date.now() > deadline) {
-      throw new Error(`timed out waiting for ${BASE_URL}/healthz/ready`);
+      throw new Error(`timed out waiting for ${BASE_URL}/healthz/ready`)
     }
-    await sleep(1000);
+    await sleep(1000)
   }
 }
 
 type JmapResponse = {
-  methodResponses: Array<[string, Record<string, unknown>, string]>;
-  sessionState: string;
-};
+  methodResponses: Array<[string, Record<string, unknown>, string]>
+  sessionState: string
+}
 
-async function jmap(
-  auth: string,
-  calls: Array<[string, Record<string, unknown>, string]>,
-): Promise<JmapResponse> {
+async function jmap(auth: string, calls: Array<[string, Record<string, unknown>, string]>): Promise<JmapResponse> {
   const body = {
     using: ["urn:ietf:params:jmap:core", "urn:stalwart:jmap"],
     methodCalls: calls.map(([name, args, id]) => [name, args, id]),
-  };
+  }
   const res = await fetch(`${BASE_URL}/jmap/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: auth },
     body: JSON.stringify(body),
-  });
+  })
   if (!res.ok) {
-    throw new Error(`JMAP HTTP ${res.status}: ${await res.text()}`);
+    throw new Error(`JMAP HTTP ${res.status}: ${await res.text()}`)
   }
-  const json = (await res.json()) as JmapResponse;
+  const json = (await res.json()) as JmapResponse
   for (const [name, data, id] of json.methodResponses) {
-    const d = data as Record<string, Record<string, unknown>>;
+    const d = data as Record<string, Record<string, unknown>>
     if (name === "error") {
-      throw new Error(`JMAP error on ${id}: ${JSON.stringify(data)}`);
+      throw new Error(`JMAP error on ${id}: ${JSON.stringify(data)}`)
     }
     for (const key of ["notCreated", "notUpdated", "notDestroyed"] as const) {
       if (d[key] && Object.keys(d[key]).length > 0) {
-        throw new Error(`JMAP ${key} on ${id}: ${JSON.stringify(d[key])}`);
+        throw new Error(`JMAP ${key} on ${id}: ${JSON.stringify(d[key])}`)
       }
     }
   }
-  return json;
+  return json
 }
 
 function createdId(resp: JmapResponse, callId: string): string {
-  const [, data] = resp.methodResponses.find(([, , id]) => id === callId) ?? [];
-  const created = (data as Record<string, Record<string, unknown>>)?.created;
-  if (!created) throw new Error(`no created in ${callId}: ${JSON.stringify(data)}`);
-  return (Object.values(created)[0].id as string) ?? "";
+  const [, data] = resp.methodResponses.find(([, , id]) => id === callId) ?? []
+  const created = (data as Record<string, Record<string, unknown>>)?.created
+  if (!created) throw new Error(`no created in ${callId}: ${JSON.stringify(data)}`)
+  return (Object.values(created)[0].id as string) ?? ""
 }
 
 function idsOf(resp: JmapResponse, callId: string): string[] {
-  const [, data] = resp.methodResponses.find(([, , id]) => id === callId) ?? [];
-  return ((data as { ids?: string[] }).ids ?? []) as string[];
+  const [, data] = resp.methodResponses.find(([, , id]) => id === callId) ?? []
+  return ((data as { ids?: string[] }).ids ?? []) as string[]
 }
 
 async function sh(...args: string[]): Promise<void> {
-  const proc = Bun.spawn(args, { stdout: "inherit", stderr: "inherit" });
-  const code = await proc.exited;
-  if (code !== 0) throw new Error(`command failed (${code}): ${args.join(" ")}`);
+  const proc = Bun.spawn(args, { stdout: "inherit", stderr: "inherit" })
+  const code = await proc.exited
+  if (code !== 0) throw new Error(`command failed (${code}): ${args.join(" ")}`)
 }
 
 async function recreateNormal(): Promise<void> {
-  console.log("==> recreating container in normal mode (dropping recovery env)");
-  const usernsArgs = RT === "podman" ? ["--userns=keep-id:uid=2000,gid=2000"] : [];
-  await sh(RT, "rm", "-f", CONTAINER);
+  console.log("==> recreating container in normal mode (dropping recovery env)")
+  const usernsArgs = RT === "podman" ? ["--userns=keep-id:uid=2000,gid=2000"] : []
+  await sh(RT, "rm", "-f", CONTAINER)
   await sh(
     RT,
     "run",
@@ -164,109 +160,106 @@ async function recreateNormal(): Promise<void> {
     "-v",
     `${OPS_DIR}/data:/var/lib/stalwart`,
     IMAGE,
-  );
-  console.log(`==> waiting for ${BASE_URL}/healthz/ready (normal mode)`);
-  await waitForHealth();
+  )
+  console.log(`==> waiting for ${BASE_URL}/healthz/ready (normal mode)`)
+  await waitForHealth()
 }
 
 // Verify normal JMAP as admin. Returns the ids found, for .env.local.
 // In --keep mode credentials/expected ids come from the existing .env.local.
 async function verifyNormalAsAdmin(opts: {
-  auth: string;
-  expectDomainId?: string;
+  auth: string
+  expectDomainId?: string
 }): Promise<{ accountId: string; username: string; domainIds: string[] }> {
   const sessionRes = await fetch(`${BASE_URL}/jmap/session`, {
     headers: { Authorization: opts.auth },
-  });
-  if (!sessionRes.ok) throw new Error(`admin session HTTP ${sessionRes.status}`);
+  })
+  if (!sessionRes.ok) throw new Error(`admin session HTTP ${sessionRes.status}`)
   const session = (await sessionRes.json()) as {
-    username: string;
-    accounts: Record<string, { name: string }>;
-  };
-  console.log(`    admin session ok: ${session.username}`);
-  const accountId = Object.keys(session.accounts)[0];
-  const verify = await jmap(opts.auth, [
-    ["x:Domain/query", { accountId, limit: 10 }, "c0"],
-  ]);
-  const domainIds = idsOf(verify, "c0");
-  if (opts.expectDomainId && !domainIds.includes(opts.expectDomainId)) {
-    throw new Error(`domain ${opts.expectDomainId} missing: ${domainIds}`);
+    username: string
+    accounts: Record<string, { name: string }>
   }
-  console.log(`    domain query ok: ${domainIds}`);
-  return { accountId, username: session.username, domainIds };
+  console.log(`    admin session ok: ${session.username}`)
+  const accountId = Object.keys(session.accounts)[0]
+  const verify = await jmap(opts.auth, [["x:Domain/query", { accountId, limit: 10 }, "c0"]])
+  const domainIds = idsOf(verify, "c0")
+  if (opts.expectDomainId && !domainIds.includes(opts.expectDomainId)) {
+    throw new Error(`domain ${opts.expectDomainId} missing: ${domainIds}`)
+  }
+  console.log(`    domain query ok: ${domainIds}`)
+  return { accountId, username: session.username, domainIds }
 }
 
 async function readEnvLocal(): Promise<Record<string, string>> {
-  const text = await Bun.file(`${OPS_DIR}/.env.local`).text();
-  const out: Record<string, string> = {};
+  const text = await Bun.file(`${OPS_DIR}/.env.local`).text()
+  const out: Record<string, string> = {}
   for (const line of text.split("\n")) {
-    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (m) out[m[1]] = m[2].trim();
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
+    if (m) out[m[1]] = m[2].trim()
   }
-  return out;
+  return out
 }
 
-const recoveryAuth = basic("admin", RECOVERY_PASSWORD);
+const recoveryAuth = basic("admin", RECOVERY_PASSWORD)
 
 async function recoveryAccount(): Promise<string> {
   const res = await fetch(`${BASE_URL}/jmap/session`, {
     headers: { Authorization: recoveryAuth },
-  });
-  if (!res.ok) throw new Error(`recovery session HTTP ${res.status}`);
-  const session = (await res.json()) as { accounts: Record<string, unknown> };
-  const accountIds = Object.keys(session.accounts);
+  })
+  if (!res.ok) throw new Error(`recovery session HTTP ${res.status}`)
+  const session = (await res.json()) as { accounts: Record<string, unknown> }
+  const accountIds = Object.keys(session.accounts)
   if (accountIds.length !== 1) {
-    throw new Error(`expected 1 recovery account, got ${accountIds.length}`);
+    throw new Error(`expected 1 recovery account, got ${accountIds.length}`)
   }
-  return accountIds[0];
+  return accountIds[0]
 }
 
 // --- main ------------------------------------------------------------------
 
-console.log(`==> waiting for ${BASE_URL}/healthz/ready (recovery mode)`);
-await waitForHealth();
-const recAccount = await recoveryAccount();
-console.log(`    recovery session ok (account ${recAccount})`);
+console.log(`==> waiting for ${BASE_URL}/healthz/ready (recovery mode)`)
+await waitForHealth()
+const recAccount = await recoveryAccount()
+console.log(`    recovery session ok (account ${recAccount})`)
 
 if (KEEP_MODE) {
   // Data volume already bootstrapped: verify objects exist, restart normal.
-  console.log("==> --keep: verifying existing data, skipping object creation");
+  console.log("==> --keep: verifying existing data, skipping object creation")
   const existing = await jmap(recoveryAuth, [
     ["x:Domain/query", { accountId: recAccount, limit: 10 }, "c0"],
     ["x:Account/query", { accountId: recAccount, limit: 10 }, "c1"],
-  ]);
-  const domainIds = idsOf(existing, "c0");
-  const accountIds = idsOf(existing, "c1");
+  ])
+  const domainIds = idsOf(existing, "c0")
+  const accountIds = idsOf(existing, "c1")
   if (domainIds.length === 0 || accountIds.length === 0) {
     throw new Error(
-      "--keep found no domains/accounts in the data volume; " +
-        "run start.sh without --keep for a clean bootstrap",
-    );
+      "--keep found no domains/accounts in the data volume; " + "run start.sh without --keep for a clean bootstrap",
+    )
   }
-  console.log(`    found domains=${domainIds} accounts=${accountIds}`);
-  await recreateNormal();
-  const prev = await readEnvLocal();
+  console.log(`    found domains=${domainIds} accounts=${accountIds}`)
+  await recreateNormal()
+  const prev = await readEnvLocal()
   if (prev.STALWART_BASE_URL !== BASE_URL) {
-    throw new Error(`--keep: base URL changed (${prev.STALWART_BASE_URL} != ${BASE_URL})`);
+    throw new Error(`--keep: base URL changed (${prev.STALWART_BASE_URL} != ${BASE_URL})`)
   }
   await verifyNormalAsAdmin({
     auth: basic(prev.STALWART_USERNAME, prev.STALWART_PASSWORD),
     expectDomainId: prev.STALWART_DOMAIN_ID,
-  });
-  console.log("--keep restart complete: normal JMAP verified as admin.");
-  process.exit(0);
+  })
+  console.log("--keep restart complete: normal JMAP verified as admin.")
+  process.exit(0)
 }
 
 // 1. Domain
-console.log(`==> creating domain ${DOMAIN}`);
+console.log(`==> creating domain ${DOMAIN}`)
 const domainResp = await jmap(recoveryAuth, [
   ["x:Domain/set", { accountId: recAccount, create: { d1: { name: DOMAIN } } }, "c0"],
-]);
-const domainId = createdId(domainResp, "c0");
-console.log(`    domain id: ${domainId}`);
+])
+const domainId = createdId(domainResp, "c0")
+console.log(`    domain id: ${domainId}`)
 
 // 2. SystemSettings: hostname + default domain (bare-username login, routing).
-console.log(`==> setting SystemSettings (hostname=${HOSTNAME})`);
+console.log(`==> setting SystemSettings (hostname=${HOSTNAME})`)
 await jmap(recoveryAuth, [
   [
     "x:SystemSettings/set",
@@ -302,10 +295,21 @@ await jmap(recoveryAuth, [
     },
     "c2",
   ],
-]);
+  // Test-only: let non-admin users run Principal/query. Since Stalwart v1 the
+  // non-admin path needs Sharing.allowDirectoryQueries (the old
+  // JmapPrincipalQuery bypass became SysAccountQuery).
+  [
+    "x:Sharing/set",
+    {
+      accountId: recAccount,
+      update: { singleton: { allowDirectoryQueries: true } },
+    },
+    "c3",
+  ],
+])
 
 // 3. Real admin account + password credential + Admin role.
-console.log(`==> creating admin ${ADMIN_USER}@${DOMAIN}`);
+console.log(`==> creating admin ${ADMIN_USER}@${DOMAIN}`)
 const adminResp = await jmap(recoveryAuth, [
   [
     "x:Account/set",
@@ -322,8 +326,8 @@ const adminResp = await jmap(recoveryAuth, [
     },
     "c0",
   ],
-]);
-const createdAdminId = createdId(adminResp, "c0");
+])
+const createdAdminId = createdId(adminResp, "c0")
 await jmap(recoveryAuth, [
   [
     "x:Account/set",
@@ -338,11 +342,11 @@ await jmap(recoveryAuth, [
     },
     "c1",
   ],
-]);
-console.log(`    admin account id: ${createdAdminId}`);
+])
+console.log(`    admin account id: ${createdAdminId}`)
 
 // 4. Test users alice + bob (+ throwaway carol, destroyed immediately).
-console.log(`==> creating test users ${USER_A}, ${USER_B} (+ throwaway carol)`);
+console.log(`==> creating test users ${USER_A}, ${USER_B} (+ throwaway carol)`)
 const usersResp = await jmap(recoveryAuth, [
   [
     "x:Account/set",
@@ -366,32 +370,28 @@ const usersResp = await jmap(recoveryAuth, [
     },
     "c0",
   ],
-]);
+])
 const created = (
   usersResp.methodResponses.find(([, , id]) => id === "c0")?.[1] as unknown as {
-    created: Record<string, { id: string }>;
+    created: Record<string, { id: string }>
   }
-).created;
-const aliceId = created.u1.id;
-const bobId = created.u2.id;
-const carolId = created.u3.id;
-console.log(`    alice=${aliceId} bob=${bobId} carol=${carolId} (destroying carol)`);
-await jmap(recoveryAuth, [
-  ["x:Account/set", { accountId: recAccount, destroy: [carolId] }, "c0"],
-]);
-const afterDestroy = await jmap(recoveryAuth, [
-  ["x:Account/query", { accountId: recAccount, limit: 10 }, "c0"],
-]);
-console.log(`    accounts after destroy: ${idsOf(afterDestroy, "c0")}`);
+).created
+const aliceId = created.u1.id
+const bobId = created.u2.id
+const carolId = created.u3.id
+console.log(`    alice=${aliceId} bob=${bobId} carol=${carolId} (destroying carol)`)
+await jmap(recoveryAuth, [["x:Account/set", { accountId: recAccount, destroy: [carolId] }, "c0"]])
+const afterDestroy = await jmap(recoveryAuth, [["x:Account/query", { accountId: recAccount, limit: 10 }, "c0"]])
+console.log(`    accounts after destroy: ${idsOf(afterDestroy, "c0")}`)
 
 // 5. Normal mode + verify + .env.local.
-const adminLogin = `${ADMIN_USER}@${DOMAIN}`;
-const adminAuth = basic(adminLogin, ADMIN_PASSWORD);
-await recreateNormal();
+const adminLogin = `${ADMIN_USER}@${DOMAIN}`
+const adminAuth = basic(adminLogin, ADMIN_PASSWORD)
+await recreateNormal()
 const { accountId: adminAccountId } = await verifyNormalAsAdmin({
   auth: adminAuth,
   expectDomainId: domainId,
-});
+})
 
 const envLocal =
   [
@@ -408,7 +408,7 @@ const envLocal =
     `STALWART_USER_B=${USER_B}@${DOMAIN}`,
     `STALWART_USER_B_PASSWORD=${USER_B_PASSWORD}`,
     `STALWART_USER_B_ACCOUNT_ID=${bobId}`,
-  ].join("\n") + "\n";
-await Bun.write(`${OPS_DIR}/.env.local`, envLocal);
-console.log(`==> wrote ${OPS_DIR}/.env.local`);
-console.log("bootstrap complete: normal JMAP verified as admin.");
+  ].join("\n") + "\n"
+await Bun.write(`${OPS_DIR}/.env.local`, envLocal)
+console.log(`==> wrote ${OPS_DIR}/.env.local`)
+console.log("bootstrap complete: normal JMAP verified as admin.")

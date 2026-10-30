@@ -52,7 +52,7 @@ describe("e2e registry: generic get/set/query against a run-scoped domain", () =
       const g = await registryGet({ config, objectType: "Domain", ids: [created.domainId as string] })
       if (!g.success) throw new Error(g.errorMessage)
       expect(g.data.list[0]?.name).toBe(domainName)
-      expect(g.data.list[0]?.isEnabled).toBe(true)
+      expect(g.data.list[0]?.enable).toBe(true)
     },
     { timeout: 30_000 },
   )
@@ -81,11 +81,11 @@ describe("e2e registry: generic get/set/query against a run-scoped domain", () =
   test(
     "registryGet reads a singleton (Imap) without explicit ids",
     async () => {
-      const g = await registryGet({ config, objectType: "Imap", properties: ["timeoutIdle"] })
+      const g = await registryGet({ config, objectType: "Imap", properties: ["idleTimeout"] })
       if (!g.success) throw new Error(g.errorMessage)
       expect(g.data.list).toHaveLength(1)
       expect(g.data.list[0]?.id).toBe("singleton")
-      expect(g.data.list[0]?.timeoutIdle).toBeNumber()
+      expect(g.data.list[0]?.idleTimeout).toBeNumber()
     },
     { timeout: 30_000 },
   )

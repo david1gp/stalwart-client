@@ -173,7 +173,7 @@ describe("e2e regSystem: read-only singletons", () => {
       expect(security.list[0]?.id).toBe("singleton")
       const manager = unwrap("taskManagerGet", await taskManagerGet({ config }))
       expect(manager.list[0]?.id).toBe("singleton")
-      expect(manager.list[0]?.maxAttempts).toBeNumber()
+      expect(manager.list[0]?.alertAfter).toBeNumber()
     },
     { timeout: 30_000 },
   )
@@ -197,7 +197,7 @@ describe("e2e regSystem: reversible singleton updates", () => {
   test(
     "patches Imap, Jmap, WebDav and Sharing and restores them",
     async () => {
-      await singletonRoundTrip("imapSet", imapGet, imapSet, "timeoutIdle", () => 1200000)
+      await singletonRoundTrip("imapSet", imapGet, imapSet, "idleTimeout", () => 1200000)
       await singletonRoundTrip("jmapSet", jmapGet, jmapSet, "maxRequestSize", (v) => (v as number) + 1024)
       await singletonRoundTrip("webDavSet", webDavGet, webDavSet, "maxResults", (v) => (v as number) + 1)
       await singletonRoundTrip("sharingSet", sharingGet, sharingSet, "maxShares", (v) => (v as number) + 1)
@@ -308,7 +308,7 @@ describe("e2e regSystem: safe actions", () => {
           remoteIp: "127.0.0.1",
           spfEhloDomain: "example.test",
           spfMailFromDomain: "example.test",
-          to: { "alice@example.test": true },
+          rcptTo: { "alice@example.test": true },
         }),
       )
       expect(result.dmarcPolicy).toBeString()
@@ -363,7 +363,7 @@ describe("e2e regSystem: applications and AI models", () => {
           create: {
             a1: {
               description: `e2e ${runId}`,
-              enabled: false,
+              enable: false,
               resourceUrl: "https://example.test/app.tar.gz",
               urlPrefix: { [appPrefix]: true },
             },
@@ -375,7 +375,7 @@ describe("e2e regSystem: applications and AI models", () => {
       const q = unwrap("applicationQuery", await applicationQuery({ config }))
       expect(q.ids.map(String)).toContain(created.applicationId as string)
       const g = unwrap("applicationGet", await applicationGet({ config, ids: [created.applicationId as string] }))
-      expect(g.list[0]?.enabled).toBe(false)
+      expect(g.list[0]?.enable).toBe(false)
       unwrap("applicationSet destroy", await applicationSet({ config, destroy: [created.applicationId as string] }))
       created.applicationId = undefined
     },
@@ -391,8 +391,9 @@ describe("e2e regSystem: applications and AI models", () => {
           config,
           create: {
             a1: {
+              "@type": "OpenAi",
               allowInvalidCerts: false,
-              httpAuth: { "@type": "Unauthenticated" },
+              logprobs: false,
               httpHeaders: {},
               model: "probe",
               name: `e2e-${runId}`,

@@ -179,7 +179,7 @@ describe("e2e groupwareCal: principals, calendars, events, notifications, identi
     async () => {
       const r = await principalSet({ config: alice, update: { [bobPrincipalId]: { description: "e2e" } } })
       expect(r.success).toBe(false)
-      if (!r.success) expect(JSON.stringify(r)).toContain("notRequest")
+      if (!r.success) expect(r.errorMessage).toContain("unknownMethod")
     },
     { timeout: 30_000 },
   )
@@ -337,10 +337,13 @@ describe("e2e groupwareCal: principals, calendars, events, notifications, identi
       })
       expect(s.success).toBe(false)
       if (!s.success) expect(s.errorMessage).toContain("Calendar address not configured for this account.")
-      // ParticipantIdentity/get carries no state and the store has no changelog.
+      // Since Stalwart v1 the stateless store answers an empty diff instead of
+      // cannotCalculateChanges.
       const c = await participantIdentityChanges({ config: alice, sinceState: "n" })
-      expect(c.success).toBe(false)
-      if (!c.success) expect(c.errorMessage).toContain("cannotCalculateChanges")
+      if (!c.success) throw new Error(c.errorMessage)
+      expect(c.data.created).toEqual([])
+      expect(c.data.updated).toEqual([])
+      expect(c.data.destroyed).toEqual([])
     },
     { timeout: 30_000 },
   )

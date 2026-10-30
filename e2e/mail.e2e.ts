@@ -241,7 +241,7 @@ describe("e2e mail: alice sends to bob, both sides read it back", () => {
   )
 
   test(
-    "Email/copy between accounts without sharing is forbidden",
+    "Email/copy between accounts without sharing is rejected",
     async () => {
       const copied = await emailCopy({
         config: bob,
@@ -249,7 +249,8 @@ describe("e2e mail: alice sends to bob, both sides read it back", () => {
         create: { x1: { id: created.receivedEmailId as string, mailboxIds: { [created.bobInboxId as string]: true } } },
       })
       expect(copied.success).toBe(false)
-      if (!copied.success) expect(copied.errorMessage).toContain("forbidden")
+      // v1 validates the from-account before the share check (0.16 answered `forbidden`).
+      if (!copied.success) expect(copied.errorMessage).toContain("fromAccountNotFound")
     },
     { timeout: 30_000 },
   )

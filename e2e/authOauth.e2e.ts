@@ -76,6 +76,8 @@ beforeAll(async () => {
         clientId,
         contacts: { [aliceName]: true },
         redirectUris: { [redirectUri]: true },
+        grantTypes: { authorizationCode: true, refreshToken: true, deviceCode: true },
+        scopes: { mail: true },
       },
     },
   })
@@ -110,11 +112,14 @@ describe("e2e auth-oauth: discovery endpoints", () => {
   )
 
   test(
-    "oauthProtectedResource, oidcMetadata and oauthJwks are reachable",
+    "oidcMetadata and oauthJwks are reachable; protected-resource pins 404 on untrusted hosts",
     async () => {
+      // v1 only serves the protected-resource document to trusted hosts, so
+      // the loopback base URL answers NotFound (`resource_origin` in
+      // `crates/http/src/auth/oauth/authorize.rs`).
       const pr = await oauthProtectedResource({ config: anonConfig })
-      if (!pr.success) throw new Error(pr.errorMessage)
-      expect(pr.data.bearer_methods_supported).toContain("header")
+      expect(pr.success).toBe(false)
+      if (!pr.success) expect(pr.errorData ?? pr.errorMessage).toContain("Not Found")
       const md = await oidcMetadata({ config: anonConfig })
       if (!md.success) throw new Error(md.errorMessage)
       expect(md.data.userinfo_endpoint).toContain("/auth/userinfo")
@@ -130,7 +135,7 @@ describe("e2e auth-oauth: discovery endpoints", () => {
     async () => {
       const r = await oauthClientRegister({
         config: anonConfig,
-        redirectUris: [`https://localhost/e2e-${runId}-dyn/callback`],
+        redirectUris: [`http://127.0.0.1:18081/e2e-${runId}-dyn/callback`],
         clientName: `e2e-${runId}`,
         anonymous: true,
       })
@@ -156,6 +161,7 @@ describe("e2e auth-oauth: authorization-code + PKCE login as alice", () => {
         clientId,
         redirectUri,
         scope: "openid offline_access",
+        consent: true,
       })
       if (!r.success) throw new Error(`auth-code login failed: ${r.errorMessage} ${r.errorData ?? ""}`)
       expect(r.data.access_token).toBeString()
@@ -184,7 +190,12 @@ describe("e2e auth-oauth: authorization-code + PKCE login as alice", () => {
   test(
     "oauthToken refreshes the access token",
     async () => {
-      const r = await oauthToken({ config: anonConfig, grantType: "refresh_token", refreshToken: aliceRefreshToken })
+      const r = await oauthToken({
+        config: anonConfig,
+        grantType: "refresh_token",
+        refreshToken: aliceRefreshToken,
+        clientId,
+      })
       if (!r.success) throw new Error(`refresh failed: ${r.errorMessage} ${r.errorData ?? ""}`)
       expect(r.data.access_token).toBeString()
     },
@@ -201,6 +212,7 @@ describe("e2e auth-oauth: device flow as alice", () => {
         clientId,
         accountName: aliceName,
         accountSecret: aliceSecret,
+        consent: true,
         pollIntervalMs: 500,
         maxAttempts: 20,
       })

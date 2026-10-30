@@ -50,8 +50,8 @@ import { spamDnsblSettingsSet } from "../src/registry/spam/spamDnsblSettingsSet.
 import { spamFileExtensionGet } from "../src/registry/spam/spamFileExtensionGet.js"
 import { spamFileExtensionQuery } from "../src/registry/spam/spamFileExtensionQuery.js"
 import { spamFileExtensionSet } from "../src/registry/spam/spamFileExtensionSet.js"
-import { spamLlmGet } from "../src/registry/spam/spamLlmGet.js"
-import { spamLlmSet } from "../src/registry/spam/spamLlmSet.js"
+import { spamAiGet } from "../src/registry/spam/spamAiGet.js"
+import { spamAiSet } from "../src/registry/spam/spamAiSet.js"
 import { spamPyzorGet } from "../src/registry/spam/spamPyzorGet.js"
 import { spamPyzorSet } from "../src/registry/spam/spamPyzorSet.js"
 import { spamRuleGet } from "../src/registry/spam/spamRuleGet.js"
@@ -357,7 +357,7 @@ describe("e2e reg-filtering: lookup object lifecycles", () => {
               "@type": "Redis",
               url: "redis://127.0.0.1:6399",
               poolMaxConnections: 2,
-              timeout: 1000,
+              connectTimeout: 1000,
               poolTimeoutCreate: null,
               poolTimeoutRecycle: null,
               poolTimeoutWait: null,
@@ -554,12 +554,12 @@ describe("e2e reg-filtering: singleton reversible updates", () => {
   )
 
   test(
-    "spamLlm stays disabled (enterprise Enable needs an AiModel)",
+    "spamAi stays disabled (enterprise Enable needs an AiModel)",
     async () => {
-      const g = await spamLlmGet({ config })
+      const g = await spamAiGet({ config })
       if (!g.success) throw fail(g, "llm get")
       expect(g.data.list[0]?.["@type"]).toBe("Disable")
-      const u = await spamLlmSet({ config, update: { singleton: { "@type": "Disable" } } })
+      const u = await spamAiSet({ config, update: { singleton: { "@type": "Disable" } } })
       if (!u.success) throw fail(u, "llm disable set")
     },
     { timeout: 30_000 },
@@ -768,19 +768,19 @@ describe("e2e reg-filtering: singleton reversible updates", () => {
   )
 
   test(
-    "tlsReportSettings subject round trip",
+    "tlsReportSettings orgName round trip",
     async () => {
       const g = await tlsReportSettingsGet({ config })
       if (!g.success) throw fail(g, "tls report get")
-      const orig = (g.data.list[0]?.subject as { else?: string } | undefined)?.else
+      const orig = (g.data.list[0]?.orgName as { else?: string } | undefined)?.else
       expect(orig).toBeString()
       const changed = `${orig} + 'e2e'`
-      const u = await tlsReportSettingsSet({ config, update: { singleton: { subject: { else: changed } } } })
+      const u = await tlsReportSettingsSet({ config, update: { singleton: { orgName: { else: changed } } } })
       if (!u.success) throw fail(u, "tls report update")
-      const g2 = await tlsReportSettingsGet({ config, properties: ["subject"] })
+      const g2 = await tlsReportSettingsGet({ config, properties: ["orgName"] })
       if (!g2.success) throw fail(g2, "tls report re-get")
-      expect((g2.data.list[0]?.subject as { else?: string } | undefined)?.else).toBe(changed)
-      const back = await tlsReportSettingsSet({ config, update: { singleton: { subject: { else: orig } } } })
+      expect((g2.data.list[0]?.orgName as { else?: string } | undefined)?.else).toBe(changed)
+      const back = await tlsReportSettingsSet({ config, update: { singleton: { orgName: { else: orig } } } })
       if (!back.success) throw fail(back, "tls report restore")
     },
     { timeout: 30_000 },
