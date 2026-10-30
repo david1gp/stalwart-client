@@ -1,6 +1,6 @@
 {
   "name": "@adaptive-ds/stalwart-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Result-based TypeScript client and CLI for the Stalwart mail server — JMAP mail, groupware, and the full management registry.",
   "keywords": [
     "stalwart",
