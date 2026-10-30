@@ -409,7 +409,7 @@ const objectTypeLines = objectNames.map((name) => {
 })
 pending.push({
   name: "registryObjectTypes.ts",
-  content: `${header}\n/** Per-object metadata for the 117 management method objects. Views live in registryViews.ts. */\nexport const registryObjectTypes = {\n${objectTypeLines.join("\n")}\n} as const;\n`,
+  content: `${header}\n/** Per-object metadata for the ${objectNames.length} management method objects. Views live in registryViews.ts. */\nexport const registryObjectTypes = {\n${objectTypeLines.join("\n")}\n} as const;\n`,
 })
 
 const viewLines = viewNames.map((key) => {

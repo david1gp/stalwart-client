@@ -3,7 +3,7 @@
  * section of `docs/api-inventory.md`.
  *
  * Reads `~/opensource/stalwart/resources/schema/schema.json.gz` with
- * `Bun.gunzipSync` (Stalwart HEAD `aa47d8ef`) and prints markdown to stdout.
+ * `Bun.gunzipSync` (Stalwart HEAD `23b69755`, v1.0.1) and prints markdown to stdout.
  * Paste the output into `docs/api-inventory.md` §3.
  *
  * Per-object data comes from the schema file (`objects` entry: `type`,
@@ -13,9 +13,9 @@
  * Stalwart source — each carries its `crates/...:line` reference — because
  * that behavior is not encoded in the schema file.
  *
- * Cross-checks enforced here: 117 `ObjectType` variants
- * (`crates/registry/src/schema/properties.rs`), 150 schema `objects`
- * (117 types + 27 views + 6 standard JMAP objects).
+ * Cross-checks enforced here: 120 `ObjectType` variants
+ * (`crates/registry/src/schema/properties.rs`), 153 schema `objects`
+ * (120 types + 27 views + 6 standard JMAP objects).
  */
 
 const SCHEMA_GZ = `${process.env.HOME}/opensource/stalwart/resources/schema/schema.json.gz`
@@ -41,9 +41,9 @@ const viewKeys = xKeys.filter((k) => k.includes("/"))
 const typeKeys = xKeys.filter((k) => !k.includes("/"))
 const stdKeys = objectKeys.filter((k) => !k.startsWith("x:"))
 
-if (typeKeys.length !== 117) throw new Error(`expected 117 registry types, got ${typeKeys.length}`)
+if (typeKeys.length !== 120) throw new Error(`expected 120 registry types, got ${typeKeys.length}`)
 if (viewKeys.length !== 27) throw new Error(`expected 27 views, got ${viewKeys.length}`)
-if (objectKeys.length !== 150) throw new Error(`expected 150 schema objects, got ${objectKeys.length}`)
+if (objectKeys.length !== 153) throw new Error(`expected 153 schema objects, got ${objectKeys.length}`)
 
 // --- curated behavioral marks (source-ref'd; not in the schema file) ---
 
@@ -112,6 +112,7 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "Tenant",
       "MailingList",
       "OAuthClient",
+      "OAuthGrant",
       "ApiKey",
       "AppPassword",
       "MaskedEmail",
@@ -162,7 +163,7 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "SpamDnsblServer",
       "SpamDnsblSettings",
       "SpamFileExtension",
-      "SpamLlm",
+      "SpamAi",
       "SpamPyzor",
       "SpamRule",
       "SpamSettings",
@@ -208,6 +209,7 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "Cache",
       "Search",
       "SearchStore",
+      "IndexQueueStatus",
       "InMemoryStore",
       "FileStorage",
       "DataRetention",
@@ -236,6 +238,7 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "WebDav",
       "Security",
       "Sharing",
+      "Metadata",
       "Email",
       "Calendar",
       "CalendarAlarm",
@@ -317,7 +320,7 @@ out.push(
   `Thin typed helpers (\`domainGet\`/\`domainSet\`/\`domainQuery\`, …) are all built on generic`,
   `\`registryGet\` / \`registrySet\` / \`registryQuery({objectType})\`. Folder for every row: \`src/registry/\`.`,
   ``,
-  `Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.`,
+  `Counts: 120 registry types + 27 views + 6 standard objects = 153 schema objects.`,
   ``,
 )
 for (const area of AREAS) {
@@ -331,8 +334,8 @@ for (const area of AREAS) {
   out.push(``)
 }
 out.push(
-  `Cross-checks: \`crates/registry/src/schema/properties.rs\` enum has 117 variants (Account=0 … WebHook=116);`,
-  `\`resources/schema/schema.json.gz\` has 150 \`objects\` keys (144 \`x:*\` + 6 standard).`,
+  `Cross-checks: \`crates/registry/src/schema/properties.rs\` enum has 120 variants;`,
+  `\`resources/schema/schema.json.gz\` has 153 \`objects\` keys (147 \`x:*\` + 6 standard).`,
   `Schema \`enterprise\` flag is set on: ${Object.keys(schema.objects)
     .filter((k) => schema.objects[k].enterprise)
     .join(", ")}.`,

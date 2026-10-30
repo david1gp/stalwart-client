@@ -48,9 +48,9 @@ describe("registry types generation is idempotent, not stale", () => {
   }, 120000)
 })
 
-describe("registry types cover all 117 management objects", () => {
-  test("registryObjectTypes has exactly 117 method objects", () => {
-    expect(Object.keys(registryObjectTypes)).toHaveLength(117)
+describe("registry types cover all 120 management objects", () => {
+  test("registryObjectTypes has exactly 120 method objects", () => {
+    expect(Object.keys(registryObjectTypes)).toHaveLength(120)
   })
 
   test("every object entry names a valid kind and method set", () => {
@@ -78,7 +78,7 @@ describe("registry types cover all 117 management objects", () => {
   test("schema info records provenance without vendoring the schema", () => {
     expect(registrySchemaInfo.sha256).toMatch(/^[0-9a-f]{64}$/)
     expect(registrySchemaInfo.source.length).toBeGreaterThan(0)
-    expect(registrySchemaInfo.objectCount).toBe(117)
+    expect(registrySchemaInfo.objectCount).toBe(120)
   })
 })
 
