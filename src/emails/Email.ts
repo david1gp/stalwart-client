@@ -27,4 +27,8 @@ export type Email = {
   textBody?: readonly unknown[]
   htmlBody?: readonly unknown[]
   attachments?: readonly unknown[]
+  /** Shared metadata namespaces (draft-ietf-jmap-metadata; needs the metadata capability in `using`). */
+  metadata?: Record<string, unknown>
+  /** Private metadata, visible only to the requesting user. */
+  privateMetadata?: Record<string, unknown>
 }

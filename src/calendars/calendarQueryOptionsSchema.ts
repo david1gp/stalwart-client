@@ -1,7 +1,12 @@
 import * as a from "valibot"
 import { stalwartClientConfigSchema } from "../client/stalwartClientConfigSchema.js"
 
-/** `Calendar/query` arguments (Stalwart's `Calendar::Filter` is `()`, so filter keys are ignored server-side). */
+/**
+ * `Calendar/query` arguments. Since Stalwart v1 `CalendarFilter` accepts the
+ * six metadata conditions (`metadataExists`/`privateMetadataExists`/
+ * `metadataTextContains`/`privateMetadataTextContains`/`metadataTextEquals`/
+ * `privateMetadataTextEquals`); anything else in the filter is ignored.
+ */
 export const calendarQueryOptionsSchema = a.object({
   config: stalwartClientConfigSchema,
   accountId: a.optional(a.string()),

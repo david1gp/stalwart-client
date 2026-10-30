@@ -3,6 +3,7 @@ import { stalwartClientConfig } from "../src/client/stalwartClientConfig.js"
 import { emailChanges } from "../src/emails/emailChanges.js"
 import { emailCopy } from "../src/emails/emailCopy.js"
 import { emailGet } from "../src/emails/emailGet.js"
+import { emailHeaderProperty } from "../src/emails/emailHeaderProperty.js"
 import { emailImport } from "../src/emails/emailImport.js"
 import { emailImportRaw } from "../src/emails/emailImportRaw.js"
 import { emailParse } from "../src/emails/emailParse.js"
@@ -920,5 +921,15 @@ describe("vacationResponseGet and vacationResponseSet manage auto-replies", () =
     expect(r.success).toBe(false)
     if (!r.success) expect(r.op).toBe("vacationResponseSet")
     expect(m.sent).toHaveLength(0)
+  })
+})
+
+describe("email header property selectors", () => {
+  test("emailHeaderProperty builds raw and typed v1 header selectors", () => {
+    expect(emailHeaderProperty("Subject")).toBe("header:Subject")
+    expect(emailHeaderProperty("Subject", "asText")).toBe("header:Subject:asText")
+    expect(emailHeaderProperty("From", "asAddresses")).toBe("header:From:asAddresses")
+    expect(emailHeaderProperty("References", "asMessageIds")).toBe("header:References:asMessageIds")
+    expect(emailHeaderProperty("Date", "asDate")).toBe("header:Date:asDate")
   })
 })

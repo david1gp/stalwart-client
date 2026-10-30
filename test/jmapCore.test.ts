@@ -3,6 +3,8 @@ import { jmapAccountIdForCapability } from "../src/jmap/jmapAccountIdForCapabili
 import { jmapAccountIdResolve } from "../src/jmap/jmapAccountIdResolve.js"
 import { jmapApiUrlResolve } from "../src/jmap/jmapApiUrlResolve.js"
 import { jmapMethodCapabilities, jmapMethodCall, jmapRequest, jmapSetErrorCheck } from "../src/index.js"
+import { jmapCapabilities } from "../src/jmap/jmapCapabilities.js"
+import { jmapMetadataUsing } from "../src/jmap/jmapMetadata.js"
 import { stalwartCapabilityResolver, STALWART_CAPABILITY } from "../src/index.js"
 import { jmapSessionCacheClear, jmapSessionCacheCreate } from "../src/index.js"
 import { jmapSessionGet } from "../src/jmap/jmapSessionGet.js"
@@ -32,6 +34,20 @@ describe("jmapMethodCapabilities derives using arrays", () => {
     expect(eventParse.success && eventParse.data).toContain("urn:ietf:params:jmap:calendars:parse")
     const cardParse = jmapMethodCapabilities("ContactCard/parse")
     expect(cardParse.success && cardParse.data).toContain("urn:ietf:params:jmap:contacts:parse")
+  })
+
+  test("jmapMetadataUsing appends the metadata capability once", () => {
+    expect(jmapCapabilities.metadata).toBe("urn:ietf:params:jmap:metadata")
+    expect(jmapMetadataUsing(["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"])).toEqual([
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+      "urn:ietf:params:jmap:metadata",
+    ])
+    expect(jmapMetadataUsing(["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:metadata"])).toEqual([
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:metadata",
+    ])
+    expect(jmapMetadataUsing()).toEqual(["urn:ietf:params:jmap:metadata"])
   })
 
   test("Email/get adds mail", () => {

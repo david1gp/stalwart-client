@@ -19,6 +19,7 @@ export const jmapCapabilities = {
   emailPush: "urn:ietf:params:jmap:emailpush",
   mailShare: "urn:ietf:params:jmap:mail:share",
   webPushVapid: "urn:ietf:params:jmap:webpush-vapid",
+  metadata: "urn:ietf:params:jmap:metadata",
 } as const
 
 export type JmapCapability = (typeof jmapCapabilities)[keyof typeof jmapCapabilities]

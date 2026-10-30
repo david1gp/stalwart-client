@@ -4,10 +4,12 @@ import { stalwartClientConfigSchema } from "../client/stalwartClientConfigSchema
 /**
  * `CalendarEvent/query` arguments. Filter keys
  * (`inCalendar`/`after`/`before`/`text`/`title`/`description`/`location`/
- * `owner`/`attendee`/`uid`) and comparators
- * (`start`/`uid`/`recurrenceId`/`created`/`updated`) per
- * `crates/jmap-proto/src/object/calendar_event.rs:81-104,125-202`;
- * query extras `expandRecurrences`/`timeZone` per `calendar_event.rs:119-123`.
+ * `owner`/`participant`/`uid` plus the six metadata conditions) and
+ * comparators (`id`/`start`/`uid`/`created`/`updated`) per
+ * `crates/jmap-proto/src/object/calendar_event.rs` (v1 renamed the
+ * `attendee` filter to `participant` and replaced the `recurrenceId`
+ * comparator with `id`); query extras `expandRecurrences`/`timeZone`.
+ * An unknown `timeZone` fails the call with an invalid-argument error.
  */
 export const calendarEventQueryOptionsSchema = a.object({
   config: stalwartClientConfigSchema,

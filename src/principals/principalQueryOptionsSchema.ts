@@ -1,7 +1,13 @@
 import * as a from "valibot"
 import { stalwartClientConfigSchema } from "../client/stalwartClientConfigSchema.js"
 
-/** `Principal/query` arguments. Filter keys per `crates/jmap-proto/src/object/principal.rs:177-194`. */
+/**
+ * `Principal/query` arguments. Filter keys
+ * (`accountIds`/`email`/`name`/`text`/`type`/`timeZone`/`calendarAddress`)
+ * per `crates/jmap-proto/src/object/principal.rs`. Since Stalwart v1 the
+ * timezone key is spelled `timeZone` and principals can be filtered by
+ * `calendarAddress`.
+ */
 export const principalQueryOptionsSchema = a.object({
   config: stalwartClientConfigSchema,
   accountId: a.optional(a.string()),

@@ -1,7 +1,12 @@
 import * as a from "valibot"
 import { stalwartClientConfigSchema } from "../client/stalwartClientConfigSchema.js"
 
-/** `FileNode/set` arguments (`crates/jmap/src/file/set.rs`). */
+/**
+ * `FileNode/set` arguments (`crates/jmap/src/file/set.rs`). Creation extras:
+ * `onDestroyRemoveChildren`, `onExists` (`replace`/`rename`/`newest`;
+ * `unchanged` is rejected — no JMAP Conditional Set support) and
+ * `compareCaseInsensitively`.
+ */
 export const fileNodeSetOptionsSchema = a.object({
   config: stalwartClientConfigSchema,
   accountId: a.optional(a.string()),

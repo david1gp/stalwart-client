@@ -29,5 +29,9 @@ export type Calendar = {
   timeZone?: string | null
   shareWith?: Record<string, readonly string[]>
   myRights?: Record<string, boolean>
+  /** Shared metadata namespaces (draft-ietf-jmap-metadata; needs the metadata capability in `using`). */
+  metadata?: Record<string, unknown>
+  /** Private metadata, visible only to the requesting user. */
+  privateMetadata?: Record<string, unknown>
   [key: string]: unknown
 }

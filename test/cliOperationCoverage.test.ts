@@ -24,6 +24,8 @@ const excludedExports = new Set([
   "jmapHttpRequestUrl",
   "jmapDownload",
   "jmapMethodCapabilities",
+  "jmapMetadataUsing",
+  "emailHeaderProperty",
   "jmapSessionCacheClear",
   "jmapSessionCacheCreate",
   "jmapSetErrorCheck",
