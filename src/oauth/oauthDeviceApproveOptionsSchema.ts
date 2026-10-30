@@ -10,6 +10,7 @@ export const oauthDeviceApproveOptionsSchema = a.object({
   accountName: a.pipe(a.string(), a.minLength(1)),
   accountSecret: a.pipe(a.string(), a.minLength(1)),
   code: a.pipe(a.string(), a.minLength(1)),
+  consent: a.optional(a.boolean()),
   mfaToken: a.optional(a.string()),
 })
 

@@ -29,7 +29,7 @@ export async function oauthDeviceLogin(options: OauthDeviceLoginOptions): Promis
   const op = "oauthDeviceLogin"
   const parsed = a.safeParse(oauthDeviceLoginOptionsSchema, options)
   if (!parsed.success) return createResultError(op, a.summarize(parsed.issues))
-  const { config, clientId, accountName, accountSecret, scope, nonce } = parsed.output
+  const { config, clientId, accountName, accountSecret, scope, nonce, consent } = parsed.output
   const maxAttempts = parsed.output.maxAttempts ?? 12
   const authorize = await oauthDeviceAuthorize({
     config,
@@ -38,7 +38,13 @@ export async function oauthDeviceLogin(options: OauthDeviceLoginOptions): Promis
     ...(nonce !== undefined ? { nonce } : {}),
   })
   if (!authorize.success) return authorize
-  const approve = await oauthDeviceApprove({ config, accountName, accountSecret, code: authorize.data.user_code })
+  const approve = await oauthDeviceApprove({
+    config,
+    accountName,
+    accountSecret,
+    code: authorize.data.user_code,
+    ...(consent !== undefined ? { consent } : {}),
+  })
   if (!approve.success) return approve
   if (approve.data.type !== "verified") {
     return createResultError(

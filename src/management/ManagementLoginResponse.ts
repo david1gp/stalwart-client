@@ -1,13 +1,19 @@
 /**
  * Login response (`POST /api/auth`).
  *
- * Shape from `LoginResponse` in `crates/http/src/auth/oauth/auth.rs`:
- * `authenticated` carries the `client_code` to exchange at `POST /auth/token`,
- * `verified` confirms a device approval, `mfaRequired` asks for an `mfaToken`
- * retry and `failure` reports bad credentials.
+ * Shape from `LoginResponse` in `crates/http/src/auth/oauth/auth.rs`
+ * (Stalwart v1): `authenticated` carries the redirect `location`
+ * (`{redirect_uri}?code={client_code}&state=…&iss=…`) whose `code` is
+ * exchanged at `POST /auth/token`; `consentRequired` returns a `token` for
+ * a follow-up `authConsent` login; `verified` confirms a device approval;
+ * `mfaRequired` asks for an `mfaToken` retry; `denied`/`invalid` report
+ * rejection and bad requests.
  */
 export type ManagementLoginResponse =
-  | { type: "authenticated"; client_code: string; iss: string }
+  | { type: "authenticated"; location: string }
+  | { type: "redirect"; location: string }
+  | { type: "invalid"; error: string; description?: string }
   | { type: "verified" }
+  | { type: "denied" }
   | { type: "mfaRequired" }
-  | { type: "failure" }
+  | { type: "consentRequired"; token: string }

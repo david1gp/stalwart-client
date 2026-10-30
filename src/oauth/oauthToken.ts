@@ -17,10 +17,22 @@ export async function oauthToken(options: OauthTokenOptions): PromiseResult<OAut
   const op = "oauthToken"
   const parsed = a.safeParse(oauthTokenOptionsSchema, options)
   if (!parsed.success) return createResultError(op, a.summarize(parsed.issues))
-  const { config, grantType, code, deviceCode, refreshToken, clientId, clientSecret, redirectUri, codeVerifier } =
-    parsed.output
+  const {
+    config,
+    grantType,
+    code,
+    deviceCode,
+    refreshToken,
+    clientId,
+    clientSecret,
+    redirectUri,
+    codeVerifier,
+    scope,
+  } = parsed.output
   const clientAuth = parsed.output.clientAuth ?? "none"
   const fields: Record<string, string> = { grant_type: grantType }
+  // Refresh grants may narrow the scope; the server rejects scopes outside the grant.
+  if (scope !== undefined) fields.scope = scope
   if (grantType === "authorization_code") {
     if (code !== undefined) fields.code = code
     if (redirectUri !== undefined) fields.redirect_uri = redirectUri

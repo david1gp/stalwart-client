@@ -12,13 +12,19 @@ export interface OidcDiscoveryDocument {
   jwks_uri: string
   registration_endpoint: string
   device_authorization_endpoint: string
+  revocation_endpoint: string
+  end_session_endpoint: string
   scopes_supported: string[]
   response_types_supported: string[]
   subject_types_supported: string[]
   grant_types_supported: string[]
   token_endpoint_auth_methods_supported: string[]
+  revocation_endpoint_auth_methods_supported: string[]
   id_token_signing_alg_values_supported: string[]
   claims_supported: string[]
   code_challenge_methods_supported: string[]
   authorization_response_iss_parameter_supported: boolean
+  client_id_metadata_document_supported: boolean
+  protected_resources: string[]
+  stalwart_required_scopes?: string[]
 }

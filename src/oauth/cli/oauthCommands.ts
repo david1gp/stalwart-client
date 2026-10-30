@@ -12,7 +12,9 @@ import { oauthDeviceAuthorize } from "../oauthDeviceAuthorize.js"
 import { oauthDeviceLogin } from "../oauthDeviceLogin.js"
 import { oauthIntrospect } from "../oauthIntrospect.js"
 import { oauthJwks } from "../oauthJwks.js"
+import { oauthLogout } from "../oauthLogout.js"
 import { oauthMetadata } from "../oauthMetadata.js"
+import { oauthRevoke } from "../oauthRevoke.js"
 import { oauthPkcePairCreate } from "../oauthPkcePairCreate.js"
 import { oauthProtectedResource } from "../oauthProtectedResource.js"
 import { oauthToken } from "../oauthToken.js"
@@ -152,6 +154,65 @@ const introspectCommand = buildCommand({
   docs: { brief: "Introspect an access token (POST /auth/introspect)" },
 })
 
+const revokeCommand = buildCommand({
+  async func(
+    this: CommandContext,
+    flags: CliConfigFlags & { token: string; clientId?: string; clientSecret?: string; clientAuth?: string },
+  ) {
+    await cliRunApi(this, flags, (config) =>
+      oauthRevoke({
+        config,
+        token: flags.token,
+        clientId: flags.clientId,
+        clientSecret: flags.clientSecret,
+        clientAuth: flags.clientAuth as "none" | "client_secret_post" | "client_secret_basic" | undefined,
+      }),
+    )
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      token: cliScalarFlagParams.requiredString("Access or refresh token to revoke"),
+      clientId: cliScalarFlagParams.optionalString("OAuth client identifier"),
+      clientSecret: cliScalarFlagParams.optionalString("OAuth client secret (confidential clients)"),
+      clientAuth: cliScalarFlagParams.optionalString("Client auth: none | client_secret_post | client_secret_basic"),
+    },
+  },
+  docs: { brief: "Revoke a token, signing the application out (POST /auth/revoke)" },
+})
+
+const logoutCommand = buildCommand({
+  async func(
+    this: CommandContext,
+    flags: CliConfigFlags & {
+      clientId?: string
+      postLogoutRedirectUri?: string
+      state?: string
+      idTokenHint?: string
+    },
+  ) {
+    await cliRunApi(this, flags, (config) =>
+      oauthLogout({
+        config,
+        clientId: flags.clientId,
+        postLogoutRedirectUri: flags.postLogoutRedirectUri,
+        state: flags.state,
+        idTokenHint: flags.idTokenHint,
+      }),
+    )
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      clientId: cliScalarFlagParams.optionalString("OAuth client identifier"),
+      postLogoutRedirectUri: cliScalarFlagParams.optionalString("Registered post-logout URI to observe"),
+      state: cliScalarFlagParams.optionalString("State echoed back at the post-logout URI"),
+      idTokenHint: cliScalarFlagParams.optionalString("ID token hint for the session"),
+    },
+  },
+  docs: { brief: "End the SSO session, observing the redirect (GET /auth/logout)" },
+})
+
 const userinfoCommand = buildCommand({
   async func(this: CommandContext, flags: CliConfigFlags) {
     await cliRunApi(this, flags, (config) => oidcUserinfo({ config }))
@@ -225,6 +286,7 @@ const authcodeLoginCommand = buildCommand({
       redirectUri: string
       scope?: string
       nonce?: string
+      consent?: boolean
     },
   ) {
     await cliRunApi(this, flags, (config) =>
@@ -236,6 +298,7 @@ const authcodeLoginCommand = buildCommand({
         redirectUri: flags.redirectUri,
         scope: flags.scope,
         nonce: flags.nonce,
+        consent: flags.consent,
       }),
     )
   },
@@ -248,6 +311,7 @@ const authcodeLoginCommand = buildCommand({
       redirectUri: cliScalarFlagParams.requiredString("Redirect URI (https, matching the client registration)"),
       scope: cliScalarFlagParams.optionalString("Space-separated scope list"),
       nonce: cliScalarFlagParams.optionalString("OIDC nonce"),
+      consent: cliScalarFlagParams.optionalBoolean("Pre-approve the scope consent screen"),
     },
   },
   docs: { brief: "Full authorization-code + PKCE login returning tokens" },
@@ -261,6 +325,7 @@ const deviceLoginCommand = buildCommand({
       accountName: string
       accountSecret: string
       scope?: string
+      consent?: boolean
       pollIntervalMs?: number
       maxAttempts?: number
     },
@@ -272,6 +337,7 @@ const deviceLoginCommand = buildCommand({
         accountName: flags.accountName,
         accountSecret: flags.accountSecret,
         scope: flags.scope,
+        consent: flags.consent,
         pollIntervalMs: flags.pollIntervalMs,
         maxAttempts: flags.maxAttempts,
       }),
@@ -284,6 +350,7 @@ const deviceLoginCommand = buildCommand({
       accountName: cliScalarFlagParams.requiredString("Account name (email) approving the device code"),
       accountSecret: cliScalarFlagParams.requiredString("Account password"),
       scope: cliScalarFlagParams.optionalString("Space-separated scope list"),
+      consent: cliScalarFlagParams.optionalBoolean("Pre-approve the scope consent screen"),
       pollIntervalMs: cliScalarFlagParams.optionalNumber("Token poll interval in ms (default: server interval)"),
       maxAttempts: cliScalarFlagParams.optionalNumber("Max token polls (default 12)"),
     },
@@ -300,6 +367,8 @@ export const oauthCommands = buildRouteMap({
     "device-approve": deviceApproveCommand,
     token: tokenCommand,
     introspect: introspectCommand,
+    revoke: revokeCommand,
+    logout: logoutCommand,
     userinfo: userinfoCommand,
     register: registerCommand,
     jwks: jwksCommand,

@@ -6,6 +6,8 @@ import { stalwartClientConfigSchema } from "../client/stalwartClientConfigSchema
  * `clientAuth`: `none` sends just `client_id`, `client_secret_post` adds
  * `client_secret` to the form, `client_secret_basic` sends both as an HTTP
  * Basic credential — `client_credentials` in `crates/http/src/auth/oauth/token.rs`).
+ * The `refresh_token` grant requires `clientId` (the server answers
+ * `invalid_request` without it); `scope` optionally narrows the refresh.
  */
 export const oauthTokenOptionsSchema = a.object({
   config: stalwartClientConfigSchema,

@@ -15,7 +15,7 @@ export async function oauthDeviceApprove(options: OauthDeviceApproveOptions): Pr
   const op = "oauthDeviceApprove"
   const parsed = a.safeParse(oauthDeviceApproveOptionsSchema, options)
   if (!parsed.success) return createResultError(op, a.summarize(parsed.issues))
-  const { config, accountName, accountSecret, code, mfaToken } = parsed.output
+  const { config, accountName, accountSecret, code, consent, mfaToken } = parsed.output
   return jmapHttpRequest<ManagementLoginResponse>({
     config,
     method: "POST",
@@ -28,6 +28,7 @@ export async function oauthDeviceApprove(options: OauthDeviceApproveOptions): Pr
         accountName,
         accountSecret,
         code,
+        ...(consent !== undefined ? { consent } : {}),
         ...(mfaToken !== undefined ? { mfaToken } : {}),
       },
     },

@@ -7,8 +7,10 @@ import { managementLoginOptionsSchema, type ManagementLoginOptions } from "./man
 /**
  * Authenticate a user for the OAuth flows (`POST /api/auth`, anonymous).
  *
- * Issues an authorization `client_code` (`authCode`) rather than a session;
- * the web UI and device clients exchange it at `POST /auth/token`
+ * `authCode` logins answer `authenticated` with a redirect `location`
+ * carrying `?code=&state=&iss=`; exchange the `code` at `POST /auth/token`.
+ * `authDevice` approvals answer `verified`; consent-gated logins answer
+ * `consentRequired` with a `token` for a follow-up `authConsent` login
  * (`operationId: login` in `api/v1/openapi.yml`).
  */
 export async function managementLogin(options: ManagementLoginOptions): PromiseResult<ManagementLoginResponse> {

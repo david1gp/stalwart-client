@@ -7,6 +7,7 @@ import { cliJsonParse } from "../../cli/cliJsonParse.js"
 import { cliRunApi } from "../../cli/cliRunApi.js"
 import { cliScalarFlagParams } from "../../cli/cliScalarFlagParams.js"
 import { managementAccount } from "../managementAccount.js"
+import { managementClientInfo } from "../managementClientInfo.js"
 import { managementDiscover } from "../managementDiscover.js"
 import { managementLogin } from "../managementLogin.js"
 import { managementSchema } from "../managementSchema.js"
@@ -48,6 +49,19 @@ const discoverCommand = buildCommand({
   docs: { brief: "Discover the OIDC provider for an email (GET /api/discover/{email})" },
 })
 
+const clientInfoCommand = buildCommand({
+  async func(this: CommandContext, flags: CliConfigFlags & { query: string }) {
+    await cliRunApi(this, flags, (config) => managementClientInfo({ config, query: flags.query }))
+  },
+  parameters: {
+    flags: {
+      ...cliConfigFlagParams,
+      query: cliScalarFlagParams.requiredString("Authorization query string, or user_code=… for a device flow"),
+    },
+  },
+  docs: { brief: "OAuth client behind an authorization request (GET /api/auth/client)" },
+})
+
 const accountCommand = buildCommand({
   async func(this: CommandContext, flags: CliConfigFlags) {
     await cliRunApi(this, flags, (config) => managementAccount({ config }))
@@ -80,6 +94,7 @@ const schemaCommand = buildCommand({
 export const managementCommands = buildRouteMap({
   routes: {
     login: loginCommand,
+    "client-info": clientInfoCommand,
     discover: discoverCommand,
     account: accountCommand,
     "schema-redirect": schemaRedirectCommand,

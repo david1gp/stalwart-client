@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { stalwartClientConfig } from "../src/client/stalwartClientConfig.js"
 import { managementAccount } from "../src/management/managementAccount.js"
+import { managementClientInfo } from "../src/management/managementClientInfo.js"
 import { managementDiscover } from "../src/management/managementDiscover.js"
 import { managementLogin } from "../src/management/managementLogin.js"
 import { managementSchema } from "../src/management/managementSchema.js"
@@ -12,7 +13,9 @@ import { oauthDeviceAuthorize } from "../src/oauth/oauthDeviceAuthorize.js"
 import { oauthDeviceLogin } from "../src/oauth/oauthDeviceLogin.js"
 import { oauthIntrospect } from "../src/oauth/oauthIntrospect.js"
 import { oauthJwks } from "../src/oauth/oauthJwks.js"
+import { oauthLogout } from "../src/oauth/oauthLogout.js"
 import { oauthMetadata } from "../src/oauth/oauthMetadata.js"
+import { oauthRevoke } from "../src/oauth/oauthRevoke.js"
 import { oauthPkcePairCreate } from "../src/oauth/oauthPkcePairCreate.js"
 import { oauthProtectedResource } from "../src/oauth/oauthProtectedResource.js"
 import { oauthToken } from "../src/oauth/oauthToken.js"
@@ -197,6 +200,24 @@ describe("OAuth token endpoint", () => {
     expect(r.success).toBe(true)
   })
 
+  test("oauthToken sends scope for refresh narrowing", async () => {
+    mock = fetchMockCreate((request) => {
+      const form = formBody(request)
+      expect(form.get("grant_type")).toBe("refresh_token")
+      expect(form.get("refresh_token")).toBe("rt1")
+      expect(form.get("scope")).toBe("openid")
+      return fetchMockJson({ access_token: "at4", token_type: "bearer", expires_in: 3600 })
+    })
+    const r = await oauthToken({
+      config,
+      grantType: "refresh_token",
+      refreshToken: "rt1",
+      clientId: "web",
+      scope: "openid",
+    })
+    expect(r.success).toBe(true)
+  })
+
   test("oauthToken surfaces error grants as a ResultErr with the server JSON", async () => {
     mock = fetchMockCreate(() => fetchMockJson({ error: "authorization_pending" }, 400, "Bad Request"))
     const r = await oauthToken({
@@ -259,6 +280,85 @@ describe("OAuth introspection, userinfo and registration", () => {
   })
 })
 
+describe("OAuth revocation and logout", () => {
+  test("oauthRevoke posts the token form anonymously", async () => {
+    mock = fetchMockCreate((request) => {
+      expect(new URL(request.url).pathname).toBe("/auth/revoke")
+      expect(request.method).toBe("POST")
+      expect(request.headers["Authorization"]).toBeUndefined()
+      const form = formBody(request)
+      expect(form.get("token")).toBe("rt1")
+      expect(form.get("client_id")).toBe("web")
+      return new Response(null, { status: 200, statusText: "OK" })
+    })
+    const r = await oauthRevoke({ config, token: "rt1", clientId: "web" })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data).toEqual({ revoked: true })
+  })
+
+  test("oauthRevoke sends confidential client auth as HTTP Basic", async () => {
+    mock = fetchMockCreate((request) => {
+      expect(request.headers["Authorization"]).toBe(`Basic ${Buffer.from("web:s3cret").toString("base64")}`)
+      expect(formBody(request).get("client_secret")).toBeNull()
+      return new Response(null, { status: 200, statusText: "OK" })
+    })
+    const r = await oauthRevoke({
+      config,
+      token: "rt1",
+      clientId: "web",
+      clientSecret: "s3cret",
+      clientAuth: "client_secret_basic",
+    })
+    expect(r.success).toBe(true)
+  })
+
+  test("oauthRevoke surfaces invalid_client as a ResultErr", async () => {
+    mock = fetchMockCreate(() => fetchMockJson({ error: "invalid_client" }, 401, "Unauthorized"))
+    const r = await oauthRevoke({ config, token: "rt1", clientId: "nope" })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.errorData).toContain("invalid_client")
+  })
+
+  test("oauthLogout observes the post-logout redirect without following it", async () => {
+    mock = fetchMockCreate((request) => {
+      const url = new URL(request.url)
+      expect(url.pathname).toBe("/auth/logout")
+      expect(url.searchParams.get("client_id")).toBe("web")
+      expect(url.searchParams.get("post_logout_redirect_uri")).toBe("https://app.example.test/signed-out")
+      expect(url.searchParams.get("state")).toBe("s1")
+      return new Response(null, {
+        status: 303,
+        statusText: "See Other",
+        headers: { location: "https://app.example.test/signed-out?state=s1" },
+      })
+    })
+    const r = await oauthLogout({
+      config,
+      clientId: "web",
+      postLogoutRedirectUri: "https://app.example.test/signed-out",
+      state: "s1",
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.ended).toBe(true)
+      expect(r.data.location).toBe("https://app.example.test/signed-out?state=s1")
+    }
+  })
+
+  test("oauthLogout treats the signed-out page as success", async () => {
+    mock = fetchMockCreate((request) => {
+      expect(new URL(request.url).pathname).toBe("/auth/logout")
+      return new Response("<h1>You have been signed out</h1>", { status: 200, statusText: "OK" })
+    })
+    const r = await oauthLogout({ config })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.ended).toBe(true)
+      expect(r.data.location).toBeUndefined()
+    }
+  })
+})
+
 describe("OAuth PKCE helper", () => {
   test("oauthPkcePairCreate returns a verifier and matching S256 challenge", async () => {
     const r = await oauthPkcePairCreate()
@@ -283,7 +383,9 @@ describe("OAuth convenience logins", () => {
     mock = fetchMockCreate((request) => {
       const url = new URL(request.url)
       bodies.push({ path: url.pathname, body: request.body })
-      if (url.pathname === "/api/auth") return fetchMockJson({ type: "authenticated", client_code: "cc1", iss: "x" })
+      if (url.pathname === "/api/auth") {
+        return fetchMockJson({ type: "authenticated", location: "https://localhost/cb?code=cc1&state=s1&iss=x" })
+      }
       const form = formBody(request)
       expect(form.get("grant_type")).toBe("authorization_code")
       expect(form.get("code")).toBe("cc1")
@@ -296,6 +398,7 @@ describe("OAuth convenience logins", () => {
       accountSecret: "pw",
       clientId: "web",
       redirectUri: "https://localhost/cb",
+      state: "s1",
     })
     expect(r.success).toBe(true)
     if (r.success) expect(r.data.access_token).toBe("at")
@@ -303,12 +406,36 @@ describe("OAuth convenience logins", () => {
     const login = (bodies[0] as { body: string }).body
     const loginJson = JSON.parse(login) as Record<string, unknown>
     expect(loginJson["type"]).toBe("authCode")
-    expect(loginJson["codeChallengeMethod"]).toBe("S256")
+    const query = new URLSearchParams(loginJson["query"] as string)
+    expect(query.get("response_type")).toBe("code")
+    expect(query.get("client_id")).toBe("web")
+    expect(query.get("redirect_uri")).toBe("https://localhost/cb")
+    expect(query.get("state")).toBe("s1")
+    expect(query.get("code_challenge_method")).toBe("S256")
+    expect(query.get("code_challenge")).toBeString()
+  })
+
+  test("oauthAuthCodeLogin fails when the redirect carries no code", async () => {
+    mock = fetchMockCreate((request) => {
+      if (new URL(request.url).pathname === "/api/auth") {
+        return fetchMockJson({ type: "authenticated", location: "https://localhost/cb?state=s1" })
+      }
+      return fetchMockJson({})
+    })
+    const r = await oauthAuthCodeLogin({
+      config,
+      accountName: "alice@example.test",
+      accountSecret: "pw",
+      clientId: "web",
+      redirectUri: "https://localhost/cb",
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.op).toBe("oauthAuthCodeLogin")
   })
 
   test("oauthAuthCodeLogin fails when login does not issue a code", async () => {
     mock = fetchMockCreate((request) => {
-      if (new URL(request.url).pathname === "/api/auth") return fetchMockJson({ type: "failure" })
+      if (new URL(request.url).pathname === "/api/auth") return fetchMockJson({ type: "denied" })
       return fetchMockJson({})
     })
     const r = await oauthAuthCodeLogin({
@@ -387,7 +514,7 @@ describe("Management endpoints", () => {
       expect(new URL(request.url).pathname).toBe("/api/auth")
       expect(request.headers["Authorization"] ?? request.headers["Authorization"]).toBeUndefined()
       seenBody = JSON.parse(String(request.body))
-      return fetchMockJson({ type: "authenticated", client_code: "cc", iss: "https://x" })
+      return fetchMockJson({ type: "authenticated", location: "https://localhost/cb?code=cc&state=s&iss=https://x" })
     })
     const r = await managementLogin({
       config,
@@ -395,15 +522,52 @@ describe("Management endpoints", () => {
         type: "authCode",
         accountName: "alice@example.test",
         accountSecret: "pw",
-        clientId: "web",
-        redirectUri: "https://localhost/cb",
-        codeChallenge: "ch",
-        codeChallengeMethod: "S256",
+        query: "response_type=code&client_id=web&redirect_uri=https%3A%2F%2Flocalhost%2Fcb&state=s",
       },
     })
     expect(r.success).toBe(true)
-    if (r.success) expect(r.data).toEqual({ type: "authenticated", client_code: "cc", iss: "https://x" })
-    expect(seenBody).toMatchObject({ type: "authCode", codeChallengeMethod: "S256" })
+    if (r.success) {
+      expect(r.data).toEqual({
+        type: "authenticated",
+        location: "https://localhost/cb?code=cc&state=s&iss=https://x",
+      })
+    }
+    expect(seenBody).toMatchObject({ type: "authCode" })
+    expect(seenBody).toHaveProperty("query")
+  })
+
+  test("managementLogin posts authConsent with a token", async () => {
+    let seenBody: unknown
+    mock = fetchMockCreate((request) => {
+      seenBody = JSON.parse(String(request.body))
+      return fetchMockJson({ type: "verified" })
+    })
+    const r = await managementLogin({
+      config,
+      login: { type: "authConsent", token: "t1", query: "client_id=web", consent: true },
+    })
+    expect(r.success).toBe(true)
+    expect(seenBody).toEqual({ type: "authConsent", token: "t1", query: "client_id=web", consent: true })
+  })
+
+  test("managementClientInfo fetches the client record for an authorization query", async () => {
+    mock = fetchMockCreate((request) => {
+      const url = new URL(request.url)
+      expect(url.pathname).toBe("/api/auth/client")
+      expect(url.searchParams.get("client_id")).toBe("web")
+      expect(request.headers["Authorization"]).toBeUndefined()
+      return fetchMockJson({ name: "Web", scopes: ["Mail"], verified: true, consentRequired: false })
+    })
+    const r = await managementClientInfo({ config, query: "client_id=web&redirect_uri=https%3A%2F%2Flocalhost%2Fcb" })
+    expect(r.success).toBe(true)
+    if (r.success && "verified" in r.data) expect(r.data.verified).toBe(true)
+  })
+
+  test("managementClientInfo surfaces the error variant for unknown clients", async () => {
+    mock = fetchMockCreate(() => fetchMockJson({ error: "invalid_client", description: "nope", redirect: false }))
+    const r = await managementClientInfo({ config, query: "client_id=nope" })
+    expect(r.success).toBe(true)
+    if (r.success && "error" in r.data) expect(r.data.error).toBe("invalid_client")
   })
 
   test("managementDiscover encodes the email in the path", async () => {
