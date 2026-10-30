@@ -1,8 +1,13 @@
 # API inventory — `@adaptive-ds/stalwart-client` coverage checklist
 
-Source pin: Stalwart at `~/opensource/stalwart`, HEAD `aa47d8ef`. v0.16 removed
-the old REST management API; everything management now runs over JMAP
-(`POST /jmap/`) under the `urn:stalwart:jmap` capability.
+Source pin: Stalwart at `~/opensource/stalwart`, HEAD `23b69755` (v1.0.1).
+Since v0.16 the old REST management API is gone; everything management runs
+over JMAP (`POST /jmap/`) under the `urn:stalwart:jmap` capability. v1 adds
+`POST /auth/revoke`, `GET|POST /auth/logout`, `GET /api/auth/client`, the
+`urn:ietf:params:jmap:metadata` capability, and four net-new registry types
+(`x:SpamAi`, `x:Metadata`, `x:OAuthGrant`, `x:IndexQueueStatus` replacing
+`x:SpamLlm`); `request.rs:`/`api/mod.rs:` line refs below predate v1 except
+where a row says otherwise.
 
 Conventions (see [architecture.md](./architecture.md)): planned function names
 are subject-first camelCase (`Email/get` → `emailGet`). Folders are
@@ -16,9 +21,10 @@ per row instead). Auth: HTTP Basic (`user:password` or app password) or
 `Bearer` (OAuth access token or `x:ApiKey` secret); `config.token` is used only
 when username+password are not both set.
 
-Counts: §1 = 71 HTTP endpoint rows; §2 = 88 standard JMAP methods + 6
-transport rows; §3 = 117 registry types + 27 views (generated). Total 309
-rows, of which 308 are assigned to work packages (§4) and 1 (`GET /logo`,
+Counts: §1 = 74 HTTP endpoint rows; §2 = 88 standard JMAP methods + 6
+transport rows (plus the metadata capability, which rides on existing
+methods); §3 = 120 registry types + 27 views (generated). Total 315
+rows, of which 314 are assigned to work packages (§4) and 1 (`GET /logo`,
 enterprise static branding asset) is out of scope (§5).
 
 ## 1. HTTP routes
@@ -73,20 +79,25 @@ additionally 403 non-loopback callers (`has_endpoint_access`, `request.rs:89`).
 | Method + path                                             | params / grant types                                                                                                                                                                                                                                                                                                                                                                     | planned fn                                    | folder       | notes                                                                      |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------ | -------------------------------------------------------------------------- |
 | `POST /auth/device` (`request.rs:398`)                    | `DeviceAuthRequest{client_id}` → `{device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval}` (`auth/oauth/mod.rs:92-105`); approval posts `DeviceAuthPost{code, email?, password?}`                                                                                                                                                                    | `oauthDeviceAuthorize` / `oauthDeviceApprove` | `src/oauth/` | safe; anonymous rate-limited                                               |
-| `POST /auth/token` (`request.rs:404`)                     | `grant_type=authorization_code` (`code`, `client_id`, `redirect_uri`, `code_verifier` PKCE-S256, `token.rs:76`); `grant_type=urn:ietf:params:oauth:grant-type:device_code` (`device_code`, `client_id`, `token.rs:152`); `grant_type=refresh_token` (`refresh_token`, `token.rs:223`); client auth HTTP Basic or `client_id`+`client_secret` body (`client_credentials`, `token.rs:376`) | `oauthToken`                                  | `src/oauth/` | safe; scopes `openid`, `offline_access`, `urn:ietf:params:oauth:scope:mail | contacts | calendars` (`common/src/auth/oauth/mod.rs:22-34`) |
+| `POST /auth/token` (`request.rs:404`)                     | `grant_type=authorization_code` (`code`, `client_id`, `redirect_uri`, `code_verifier` PKCE-S256, `token.rs:76`); `grant_type=urn:ietf:params:oauth:grant-type:device_code` (`device_code`, `client_id`, `token.rs:152`); `grant_type=refresh_token` (`refresh_token` + `client_id`, required in v1, `token.rs:223`); client auth HTTP Basic or `client_id`+`client_secret` body (`client_credentials`, `token.rs:376`) | `oauthToken`                                  | `src/oauth/` | safe; scopes `openid`, `offline_access`, `urn:ietf:params:oauth:scope:mail | contacts | calendars` (`common/src/auth/oauth/mod.rs:22-34`) |
 | `POST /auth/introspect` (`request.rs:410`, auth required) | token introspection                                                                                                                                                                                                                                                                                                                                                                      | `oauthIntrospect`                             | `src/oauth/` | admin/self token only                                                      |
 | `GET /auth/userinfo` (`request.rs:419`, auth required)    | OIDC userinfo (`auth/oauth/openid.rs:33`)                                                                                                                                                                                                                                                                                                                                                | `oidcUserinfo`                                | `src/oauth/` | safe for self                                                              |
 | `POST /auth/register` (`request.rs:428`)                  | RFC 7591 client registration (`client_name`, `redirect_uris`, `scope`, grant metadata; anonymous only if `allow_anonymous_client_registration`, `registration.rs:61-99`)                                                                                                                                                                                                                 | `oauthClientRegister`                         | `src/oauth/` | creates OAuthClient entries; e2e on local only                             |
+| `POST /auth/revoke` (v1, `request.rs:482`)                | RFC 7009 token revocation (`token` + client auth; deletes the whole grant)                                                                                                                                                                                                                                                                                                               | `oauthRevoke`                                 | `src/oauth/` | safe; unknown tokens still 200                                             |
+| `GET|POST /auth/logout` (v1, `request.rs:513`)            | OIDC RP-Initiated Logout (`client_id?`, `post_logout_redirect_uri?`, `state?`, `id_token_hint?` → 303 `location` or the signed-out page)                                                                                                                                                                                                                                                  | `oauthLogout`                                 | `src/oauth/` | safe; redirect observed, never followed                                    |
 | `GET /auth/jwks.json` (`request.rs:433`)                  | OIDC JWKS                                                                                                                                                                                                                                                                                                                                                                                | `oauthJwks`                                   | `src/oauth/` | safe                                                                       |
 | `OPTIONS` → 204 (`request.rs:440`)                        | —                                                                                                                                                                                                                                                                                                                                                                                        | —                                             | —            | safe                                                                       |
 
-Login/HTML flow behind the token endpoint: `POST /api/auth` takes
-`LoginRequest::AuthCode{account_name, account_secret, mfa_token?, client_id,
-redirect_uri?, nonce?, scope?, code_challenge?, code_challenge_method?,
-state?, resource[]}` or `LoginRequest::AuthDevice{account_name,
-account_secret, mfa_token?, code}` (`auth/oauth/auth.rs:95-131`); `GET /login`
-and `GET /device` serve the static login/device pages (`request.rs:682` —
-pages out of scope, API in scope).
+Login/HTML flow behind the token endpoint (v1 shape): `POST /api/auth` takes
+`LoginRequest::AuthCode{account_name, account_secret, mfa_token?, query,
+consent?}` (the raw authorization query; answers `authenticated` with a
+redirect `location` carrying `?code=&state=&iss=`), `LoginRequest::AuthDevice{
+account_name, account_secret, mfa_token?, code, consent?}` or the new
+`LoginRequest::AuthConsent{token, query, consent}`; responses are
+`authenticated{location}` / `redirect{location}` / `invalid` / `verified` /
+`denied` / `mfaRequired` / `consentRequired{token}`
+(`auth/oauth/auth.rs:123-210`); `GET /login` and `GET /device` serve the
+static login/device pages (pages out of scope, API in scope).
 
 ### `scim` — enterprise only (`request.rs:449`, `crates/scim/src/request.rs`)
 
@@ -126,11 +137,12 @@ Planned folders `src/management/` (account/schema/discover/auth) and
 | Method + path                                                                               | planned fn                 | folder            | notes                                                                                    |
 | ------------------------------------------------------------------------------------------- | -------------------------- | ----------------- | ---------------------------------------------------------------------------------------- |
 | `POST /api/auth` (`api/mod.rs:72`)                                                          | `managementLogin`          | `src/management/` | LoginRequest (see `auth` §); issues auth code, not a session                             |
+| `GET /api/auth/client` (v1, `api/mod.rs:84`, `?query` or `?user_code=`)    | `managementClientInfo`     | `src/management/` | safe; client record for the login screen (not in `openapi.yml`)                          |
 | `POST /api/calendar/rsvp` (`api/mod.rs:81`, `RsvpRequest` JSON, needs `itip_http_rsvp_url`) | `managementCalendarRsvp`   | `src/management/` | safe                                                                                     |
 | `GET /api/discover/{email}` (`api/mod.rs:100`)                                              | `managementDiscover`       | `src/management/` | safe; `discoverOidc` in openapi                                                          |
 | `GET /api/account` (`api/mod.rs:110`)                                                       | `managementAccount`        | `src/management/` | safe for self; returns permissions/edition/locale (verified in `docs/local-instance.md`) |
 | `GET /api/schema` → 302 `/api/schema/{sha256}` (`api/mod.rs:115`)                           | `managementSchemaRedirect` | `src/management/` | auth; verified locally                                                                   |
-| `GET /api/schema/{hash}` → gzipped schema JSON (`api/mod.rs:123`)                           | `managementSchema`         | `src/management/` | auth; 150 objects (see §3 cross-check)                                                   |
+| `GET /api/schema/{hash}` → gzipped schema JSON (`api/mod.rs:123`)                           | `managementSchema`         | `src/management/` | auth; 153 objects (see §3 cross-check)                                                   |
 | `GET /api/token/delivery` (`api/mod.rs:180`, needs `LiveDeliveryTest`)                      | `liveDeliveryToken`        | `src/live/`       | 60 s token for `?token=` SSE auth                                                        |
 | `GET /api/token/tracing` (`api/mod.rs:140`, enterprise)                                     | `liveTracingToken`         | `src/live/`       | enterprise-only; pin "Enterprise feature" on community                                   |
 | `GET /api/token/metrics` (`api/mod.rs:160`, enterprise)                                     | `liveMetricsToken`         | `src/live/`       | enterprise-only; pin "Enterprise feature" on community                                   |
@@ -187,6 +199,20 @@ RFC 8620 core; `Core/echo` is the generic echo; `SieveScript/validate`,
 `<prop>Is{GreaterThan,GreaterThanOrEqual,LessThan,LessThanOrEqual}`
 (`object/registry.rs:19-38`) with AND-only filters (`registry/query.rs`
 `extract_filters`); only the `id` sort direction default differs in test mode.
+
+v1 object metadata (draft-ietf-jmap-metadata-04, `object/metadata.rs`): no new
+methods — `metadata`/`privateMetadata` are properties of Email, Mailbox,
+SieveScript, Calendar, CalendarEvent, AddressBook, ContactCard and FileNode,
+queryable via the six `metadataExists`/`privateMetadataExists`/
+`metadataTextContains`/`privateMetadataTextContains`/`metadataTextEquals`/
+`privateMetadataTextEquals` filter conditions, all requiring
+`urn:ietf:params:jmap:metadata` in `using` (`jmapMetadataUsing`). v1 draft
+updates: FileNode `type`→`@type` + `nodeType`→`mediaType` (values capitalized;
+filters `type`/`typeMatch`→`mediaType`/`mediaTypeMatch`), `CalendarEvent`
+filter `attendee`→`participant` and `recurrenceId` comparator→`id`,
+`Calendar/query` accepts metadata filters, `Principal/query` gains
+`calendarAddress` (and `timezone`→`timeZone`), `Email/get` header selectors
+gain typed forms (`emailHeaderProperty`).
 
 ### Mail
 
@@ -249,7 +275,7 @@ RFC 8620 core; `Core/echo` is the generic echo; `SieveScript/validate`,
 | Method                      | planned fn                 | folder            | capability URN                                 | notes                                     |
 | --------------------------- | -------------------------- | ----------------- | ---------------------------------------------- | ----------------------------------------- |
 | `Principal/get`             | `principalGet`             | `src/principals/` | `urn:ietf:params:jmap:principals`              |                                           |
-| `Principal/set`             | `principalSet`             | `src/principals/` | `urn:ietf:params:jmap:principals`              |                                           |
+| `Principal/set`             | `principalSet`             | `src/principals/` | `urn:ietf:params:jmap:principals`              | v1: server answers `unknownMethod` (no Set handler) |
 | `Principal/query`           | `principalQuery`           | `src/principals/` | `urn:ietf:params:jmap:principals`              |                                           |
 | `Principal/changes`         | `principalChanges`         | `src/principals/` | `urn:ietf:params:jmap:principals`              |                                           |
 | `Principal/queryChanges`    | `principalQueryChanges`    | `src/principals/` | `urn:ietf:params:jmap:principals`              |                                           |
@@ -340,7 +366,7 @@ Singletons have no `/query` (see the bottom of `MethodName::parse`, `crates/jmap
 Thin typed helpers (`domainGet`/`domainSet`/`domainQuery`, …) are all built on generic
 `registryGet` / `registrySet` / `registryQuery({objectType})`. Folder for every row: `src/registry/`.
 
-Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
+Counts: 120 registry types + 27 views + 6 standard objects = 153 schema objects.
 
 ### directory — accounts, roles, tenants, credentials
 
@@ -351,10 +377,11 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | x:Account/User | view | — (via parent `x:Account`) | — |  | — | parent `x:Account` |
 | AccountPassword | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysAccountPassword | Password-based authentication credential. | `accountPasswordGet` / `accountPasswordSet` | set: set.rs:762 account_set |
 | AccountSettings | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysAccountSettings | Configures default account settings for locale and encryption. | `accountSettingsGet` / `accountSettingsSet` | set: set.rs:762 account_set |
-| Role | object | `x:T/get`, `x:T/set`, `x:T/query` | sysRole | Defines a named set of permissions that can be assigned to accounts, groups, or tenants. | `roleGet` / `roleSet` / `roleQuery` |  |
+| Role | object | `x:T/get`, `x:T/set`, `x:T/query` | sysRole | Defines a named set of permissions that can be assigned to accounts and groups. | `roleGet` / `roleSet` / `roleQuery` |  |
 | Tenant | object | `x:T/get`, `x:T/set`, `x:T/query` | sysTenant | Defines a tenant for multi-tenant environments with isolated resources and quotas. | `tenantGet` / `tenantSet` / `tenantQuery` | schema:enterprise |
 | MailingList | object | `x:T/get`, `x:T/set`, `x:T/query` | sysMailingList | Defines a mailing list that distributes messages to a group of recipients. | `mailingListGet` / `mailingListSet` / `mailingListQuery` |  |
 | OAuthClient | object | `x:T/get`, `x:T/set`, `x:T/query` | sysOAuthClient | Defines a registered OAuth client application. | `oauthClientGet` / `oauthClientSet` / `oauthClientQuery` |  |
+| OAuthGrant | object | `x:T/get`, `x:T/set`, `x:T/query` | sysOAuthGrant | Authorization granted by an account to an OAuth application. Deleting it signs the application out. | `oAuthGrantGet` / `oAuthGrantSet` / `oAuthGrantQuery` |  |
 | ApiKey | object | `x:T/get`, `x:T/set`, `x:T/query` | sysApiKey | API key credential for programmatic access. | `apiKeyGet` / `apiKeySet` / `apiKeyQuery` | query: query.rs:140 credential_query; set: set.rs:762 account_set |
 | AppPassword | object | `x:T/get`, `x:T/set`, `x:T/query` | sysAppPassword | App password credential for programmatic access. | `appPasswordGet` / `appPasswordSet` / `appPasswordQuery` | query: query.rs:140 credential_query; set: set.rs:762 account_set |
 | MaskedEmail | object | `x:T/get`, `x:T/set`, `x:T/query` | sysMaskedEmail | Defines a masked email address for privacy protection. | `maskedEmailGet` / `maskedEmailSet` / `maskedEmailQuery` | schema:enterprise; RUNTIME enterprise-gated (mod.rs:20) |
@@ -369,10 +396,10 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | --- | --- | --- | --- | --- | --- | --- |
 | Domain | object | `x:T/get`, `x:T/set`, `x:T/query` | sysDomain | Defines an email domain and its DNS, DKIM, and TLS certificate settings. | `domainGet` / `domainSet` / `domainQuery` |  |
 | x:Domain/DomainZone | view | — (via parent `x:Domain`) | — |  | — | parent `x:Domain` |
-| DkimSignature | object | `x:T/get`, `x:T/set`, `x:T/query` | sysDkimSignature | Defines a DKIM signature used to sign outgoing email messages. | `dkimSignatureGet` / `dkimSignatureSet` / `dkimSignatureQuery` | @type: Dkim1Ed25519Sha256, Dkim1RsaSha256, Dkim2Ed25519Sha256, Dkim2RsaSha256 |
+| DkimSignature | object | `x:T/get`, `x:T/set`, `x:T/query` | sysDkimSignature | Defines a DKIM signature used to sign outgoing email messages. | `dkimSignatureGet` / `dkimSignatureSet` / `dkimSignatureQuery` | @type: Dkim1Ed25519Sha256, Dkim1RsaSha256, Dkim2Ed25519Sha256, Dkim2RsaSha256, Dkim2MlDsa44Ed25519Sha512 |
 | Certificate | object | `x:T/get`, `x:T/set`, `x:T/query` | sysCertificate | Defines a TLS certificate and its associated private key. | `certificateGet` / `certificateSet` / `certificateQuery` |  |
 | AcmeProvider | object | `x:T/get`, `x:T/set`, `x:T/query` | sysAcmeProvider | Defines an ACME provider for automatic TLS certificate management. | `acmeProviderGet` / `acmeProviderSet` / `acmeProviderQuery` |  |
-| DnsServer | object | `x:T/get`, `x:T/set`, `x:T/query` | sysDnsServer | Defines a DNS server for automatic record management. | `dnsServerGet` / `dnsServerSet` / `dnsServerQuery` | @type: Tsig, Deprecated1, Cloudflare, DigitalOcean, DeSEC, Ovh, Bunny, Porkbun, Dnsimple, Spaceship, Route53, GoogleCloudDns, Alidns, ArvanCloud, Autodns, AzureDns, BaiduCloud, BluecatV2, ClouDns, Constellix, Cpanel, Ddnss, DnsMadeEasy, Domeneshop, Dreamhost, DuckDns, Dynu, EasyDns, EdgeDns, Exoscale, FreeMyIp, GandiV5, Gcore, Glesys, Godaddy, Hetzner, HostingDe, Hostinger, HuaweiCloud, Hurricane, IbmCloud, Infoblox, Infomaniak, Inwx, Ionos, Ipv64, Joker, Lightsail, Linode, LuaDns, MythicBeasts, Namecheap, NameDotCom, NameSilo, Netcup, Netlify, Nifcloud, Ns1, OracleCloud, Plesk, Safedns, Scaleway, TencentCloud, Transip, UltraDns, Vercel, Volcengine, Vultr, WebSupport, YandexCloud, PowerDns |
+| DnsServer | object | `x:T/get`, `x:T/set`, `x:T/query` | sysDnsServer | Defines a DNS server for automatic record management. | `dnsServerGet` / `dnsServerSet` / `dnsServerQuery` | @type: Tsig, Cloudflare, DigitalOcean, DeSEC, Ovh, Bunny, Porkbun, Dnsimple, Spaceship, Route53, GoogleCloudDns, Alidns, ArvanCloud, Autodns, AzureDns, BaiduCloud, BluecatV2, ClouDns, Constellix, Cpanel, Ddnss, DnsMadeEasy, Domeneshop, Dreamhost, DuckDns, Dynu, EasyDns, EdgeDns, Exoscale, FreeMyIp, GandiV5, Gcore, Glesys, Godaddy, Hetzner, HostingDe, Hostinger, HuaweiCloud, Hurricane, IbmCloud, Infoblox, Infomaniak, Inwx, Ionos, Ipv64, Joker, Lightsail, Linode, LuaDns, MythicBeasts, Namecheap, NameDotCom, NameSilo, Netcup, Netlify, Nifcloud, Ns1, OracleCloud, Plesk, Safedns, Scaleway, TencentCloud, Transip, UltraDns, Vercel, Volcengine, Vultr, WebSupport, YandexCloud, PowerDns |
 | DnsResolver | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysDnsResolver | Configures the DNS resolver used for domain lookups. | `dnsResolverGet` / `dnsResolverSet` | @type: System, Custom, Cloudflare, Quad9, Google |
 
 ### mta — SMTP stages, routing, throttles, queue
@@ -411,7 +438,7 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | SpamDnsblServer | object | `x:T/get`, `x:T/set`, `x:T/query` | sysSpamDnsblServer | Defines a DNSBL server used for spam filtering lookups. | `spamDnsblServerGet` / `spamDnsblServerSet` / `spamDnsblServerQuery` | @type: Any, Url, Domain, Email, Ip, Header, Body |
 | SpamDnsblSettings | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSpamDnsblSettings | Configures DNSBL query limits for spam filtering. | `spamDnsblSettingsGet` / `spamDnsblSettingsSet` |  |
 | SpamFileExtension | object | `x:T/get`, `x:T/set`, `x:T/query` | sysSpamFileExtension | Defines a file extension classification rule for spam filtering. | `spamFileExtensionGet` / `spamFileExtensionSet` / `spamFileExtensionQuery` |  |
-| SpamLlm | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSpamLlm | Configures the LLM-based spam classifier. | `spamLlmGet` / `spamLlmSet` | schema:enterprise; @type: Disable, Enable |
+| SpamAi | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSpamAi | Configures the AI spam classifier. Spam rules whose condition references an AI_ tag, directly or through a tag emitted by another such rule, run after the classifier; all other rules run before it. Rules that build tag names dynamically are not detected. | `spamAiGet` / `spamAiSet` | schema:enterprise; @type: Disable, Enable |
 | SpamPyzor | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSpamPyzor | Configures the Pyzor collaborative spam detection service. | `spamPyzorGet` / `spamPyzorSet` |  |
 | SpamRule | object | `x:T/get`, `x:T/set`, `x:T/query` | sysSpamRule | Defines a spam filter rule for message classification. | `spamRuleGet` / `spamRuleSet` / `spamRuleQuery` | @type: Any, Url, Domain, Email, Ip, Header, Body |
 | SpamSettings | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSpamSettings | Configures global spam filter thresholds, greylisting, and trust settings. | `spamSettingsGet` / `spamSettingsSet` |  |
@@ -452,7 +479,7 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | Trace | object | `x:T/get`, `x:T/query` | sysTrace | Stores a message delivery trace with associated events. | `traceGet` / `traceQuery` | schema:enterprise; RUNTIME enterprise-gated (mod.rs:20); read-only; query: query.rs:104 trace_query (enterprise); set: set.rs:780 read-only (all set ops fail) |
 | x:Trace/InboundDelivery | view | — (via parent `x:Trace`) | — |  | — | parent `x:Trace` |
 | x:Trace/OutboundDelivery | view | — (via parent `x:Trace`) | — |  | — | parent `x:Trace` |
-| Metric | object | `x:T/get`, `x:T/query` | sysMetric | Stores a collected server metric data point. | `metricGet` / `metricQuery` | RUNTIME enterprise-gated (mod.rs:20); read-only; query: query.rs:94 metric_query (enterprise); set: set.rs:780 read-only (all set ops fail); @type: Counter, Gauge, Histogram |
+| Metric | object | `x:T/get`, `x:T/query` | sysMetric | Stores a collected server metric data point. | `metricGet` / `metricQuery` | schema:enterprise; RUNTIME enterprise-gated (mod.rs:20); read-only; query: query.rs:94 metric_query (enterprise); set: set.rs:780 read-only (all set ops fail); @type: Counter, Gauge, Histogram |
 | Tracer | object | `x:T/get`, `x:T/set`, `x:T/query` | sysTracer | Defines a logging and tracing output method. | `tracerGet` / `tracerSet` / `tracerQuery` | @type: Log, Stdout, Journal, OtelHttp, OtelGrpc |
 | Alert | object | `x:T/get`, `x:T/set`, `x:T/query` | sysAlert | Defines an alert rule triggered by metric conditions. | `alertGet` / `alertSet` / `alertQuery` | schema:enterprise |
 | WebHook | object | `x:T/get`, `x:T/set`, `x:T/query` | sysWebHook | Defines a webhook endpoint for event notifications. | `webHookGet` / `webHookSet` / `webHookQuery` |  |
@@ -462,8 +489,9 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | BlobStore | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysBlobStore | Configures the blob storage backend for messages and files. | `blobStoreGet` / `blobStoreSet` | @type: Default, Sharded, S3, Azure, FileSystem, FoundationDb, PostgreSql, MySql |
 | DataStore | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysDataStore | Configures the primary data store backend. | `dataStoreGet` / `dataStoreSet` | @type: RocksDb, Sqlite, FoundationDb, PostgreSql, MySql |
 | Cache | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysCache | Configures in-memory cache sizes for data, DNS records, and authorization tokens. | `cacheGet` / `cacheSet` |  |
-| Search | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSearch | Configures full-text search indexing for emails, calendars, contacts, and tracing. | `searchGet` / `searchSet` |  |
+| Search | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSearch | Configures full-text search indexing for emails, calendars, contacts, files, and tracing. | `searchGet` / `searchSet` |  |
 | SearchStore | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSearchStore | Configures the full-text search backend. | `searchStoreGet` / `searchStoreSet` | @type: Default, ElasticSearch, Meilisearch, FoundationDb, PostgreSql, MySql |
+| IndexQueueStatus | object | `x:T/get`, `x:T/set`, `x:T/query` | sysIndexQueueStatus | Represents the processing state of a search index queue. | `indexQueueStatusGet` / `indexQueueStatusSet` / `indexQueueStatusQuery` |  |
 | InMemoryStore | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysInMemoryStore | Configures the in-memory cache and lookup store. | `inMemoryStoreGet` / `inMemoryStoreSet` | @type: Default, Sharded, Redis, RedisCluster, RedisSentinel |
 | FileStorage | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysFileStorage | Configures file storage limits. | `fileStorageGet` / `fileStorageSet` |  |
 | DataRetention | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysDataRetention | Configures data retention policies, expunge schedules, and archival settings. | `dataRetentionGet` / `dataRetentionSet` |  |
@@ -479,16 +507,16 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 
 | ObjectType | kind | methods | permissionPrefix | description | helpers | notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| SystemSettings | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSystemSettings | Configures core server settings including hostname, thread pool, and network services. | `systemSettingsGet` / `systemSettingsSet` |  |
+| SystemSettings | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSystemSettings | Configures core server settings including hostname and network services. | `systemSettingsGet` / `systemSettingsSet` |  |
 | x:SystemSettings/NetworkServices | view | — (via parent `x:SystemSettings`) | — |  | — | parent `x:SystemSettings` |
 | x:SystemSettings/NetworkSettings | view | — (via parent `x:SystemSettings`) | — |  | — | parent `x:SystemSettings` |
 | Bootstrap | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysBootstrap | Initial setup shown the first time Stalwart starts. Configures the server's identity, storage, user accounts, logging, and DNS management. | `bootstrapGet` / `bootstrapSet` | set: set.rs:776 bootstrap_set |
 | Enterprise | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysEnterprise | Configures enterprise licensing and branding settings. | `enterpriseGet` / `enterpriseSet` |  |
 | Action | object | `x:T/set` (create only) | sysAction | Defines server management actions such as reloads, troubleshooting and cache operations. | `actionSet` | create-only; query: query.rs:169 query rejected (Actions cannot be queried); set: set.rs:772 action_set (create-only); @type: ReloadSettings, ReloadTlsCertificates, ReloadLookupStores, ReloadBlockedIps, UpdateApps, TroubleshootDmarc, ClassifySpam, InvalidateCaches, InvalidateNegativeCaches, PauseMtaQueue, ResumeMtaQueue |
-| Task | object | `x:T/get`, `x:T/set`, `x:T/query` | sysTask | Represents a background task scheduled for execution. | `taskGet` / `taskSet` / `taskQuery` | query: query.rs:151 task_query; set: set.rs:770 task_set; @type: IndexDocument, UnindexDocument, IndexTrace, CalendarAlarmEmail, CalendarAlarmNotification, CalendarItipMessage, MergeThreads, DmarcReport, TlsReport, RestoreArchivedItem, DestroyAccount, AccountMaintenance, TenantMaintenance, StoreMaintenance, SpamFilterMaintenance, AcmeRenewal, DkimManagement, DnsManagement |
+| Task | object | `x:T/get`, `x:T/set`, `x:T/query` | sysTask | Represents a background task scheduled for execution. | `taskGet` / `taskSet` / `taskQuery` | query: query.rs:151 task_query; set: set.rs:770 task_set; @type: CalendarAlarmEmail, CalendarAlarmNotification, CalendarItipMessage, MergeThreads, DmarcReport, TlsReport, RestoreArchivedItem, DestroyAccount, AccountMaintenance, TenantMaintenance, StoreMaintenance, SpamFilterMaintenance, AcmeRenewal, DkimManagement, DnsManagement, ShareRevokeCleanup, DmarcReportWindow, TlsReportWindow |
 | x:Task/TaskFailed | view | — (via parent `x:Task`) | — |  | — | parent `x:Task` |
-| TaskManager | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysTaskManager | Configures task execution settings including retry strategies. | `taskManagerGet` / `taskManagerSet` |  |
-| ClusterNode | object | `x:T/get`, `x:T/query` | sysClusterNode | Represents a node in the cluster | `clusterNodeGet` / `clusterNodeQuery` | read-only; query: query.rs:131 cluster_node_query; set: set.rs:780 read-only (all set ops fail) |
+| TaskManager | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysTaskManager | Configures how background tasks are retried after transient failures. | `taskManagerGet` / `taskManagerSet` |  |
+| ClusterNode | object | `x:T/get`, `x:T/query` | sysClusterNode | Represents a node in the cluster. | `clusterNodeGet` / `clusterNodeQuery` | read-only; query: query.rs:131 cluster_node_query; set: set.rs:780 read-only (all set ops fail) |
 | ClusterRole | object | `x:T/get`, `x:T/set`, `x:T/query` | sysClusterRole | Defines a cluster node role with enabled tasks and listeners. | `clusterRoleGet` / `clusterRoleSet` / `clusterRoleQuery` |  |
 | Coordinator | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysCoordinator | Configures the cluster coordinator for inter-node communication. | `coordinatorGet` / `coordinatorSet` | @type: Disabled, Default, Kafka, Nats, Zenoh, Redis, RedisCluster, RedisSentinel |
 | Http | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysHttp | Configures HTTP server settings including rate limiting, CORS, and security headers. | `httpGet` / `httpSet` |  |
@@ -502,6 +530,7 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | WebDav | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysWebDav | Configures WebDAV protocol settings including property limits and locking. | `webDavGet` / `webDavSet` |  |
 | Security | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSecurity | Configures automatic IP banning rules for abuse, authentication failures, and port scanning. | `securityGet` / `securitySet` |  |
 | Sharing | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysSharing | Configures sharing settings for calendars, address books, and files. | `sharingGet` / `sharingSet` |  |
+| Metadata | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysMetadata | Configures object metadata: JMAP metadata, WebDAV dead properties and IMAP annotations. | `metadataGet` / `metadataSet` |  |
 | Email | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysEmail | Configures email message limits, encryption, compression, and default folder settings. | `emailGet` / `emailSet` |  |
 | x:Email/EmailDefaults | view | — (via parent `x:Email`) | — |  | — | parent `x:Email` |
 | x:Email/EmailEncryption | view | — (via parent `x:Email`) | — |  | — | parent `x:Email` |
@@ -511,20 +540,20 @@ Counts: 117 registry types + 27 views + 6 standard objects = 150 schema objects.
 | CalendarAlarm | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysCalendarAlarm | Configures calendar alarm email notifications. | `calendarAlarmGet` / `calendarAlarmSet` |  |
 | CalendarScheduling | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysCalendarScheduling | Configures calendar scheduling, iTIP messaging, and HTTP RSVP settings. | `calendarSchedulingGet` / `calendarSchedulingSet` |  |
 | AddressBook | singleton | `x:T/get`, `x:T/set` (`ids: ["singleton"]`, no `/query`) | sysAddressBook | Configures address book and contact storage settings. | `addressBookGet` / `addressBookSet` |  |
-| AiModel | object | `x:T/get`, `x:T/set`, `x:T/query` | sysAiModel | Defines an AI model endpoint for LLM-based features. | `aiModelGet` / `aiModelSet` / `aiModelQuery` | schema:enterprise |
+| AiModel | object | `x:T/get`, `x:T/set`, `x:T/query` | sysAiModel | Defines an AI model endpoint used by AI-assisted features such as the spam classifier and the Sieve llm_prompt function. | `aiModelGet` / `aiModelSet` / `aiModelQuery` | schema:enterprise; @type: OpenAi, Anthropic, Gemini, Ollama, TypeSafe |
 | Application | object | `x:T/get`, `x:T/set`, `x:T/query` | sysApplication | Defines a web application served by the server. | `applicationGet` / `applicationSet` / `applicationQuery` |  |
 | AllowedIp | object | `x:T/get`, `x:T/set`, `x:T/query` | sysAllowedIp | Defines an allowed IP address or network range. | `allowedIpGet` / `allowedIpSet` / `allowedIpQuery` |  |
 | BlockedIp | object | `x:T/get`, `x:T/set`, `x:T/query` | sysBlockedIp | Defines a blocked IP address or network range. | `blockedIpGet` / `blockedIpSet` / `blockedIpQuery` |  |
 
-Cross-checks: `crates/registry/src/schema/properties.rs` enum has 117 variants (Account=0 … WebHook=116);
-`resources/schema/schema.json.gz` has 150 `objects` keys (144 `x:*` + 6 standard).
-Schema `enterprise` flag is set on: x:AiModel, x:Alert, x:ArchivedItem, x:MaskedEmail, x:MetricsStore, x:SpamLlm, x:Tenant, x:Trace, x:TracingStore.
+Cross-checks: `crates/registry/src/schema/properties.rs` enum has 120 variants;
+`resources/schema/schema.json.gz` has 153 `objects` keys (147 `x:*` + 6 standard).
+Schema `enterprise` flag is set on: x:AiModel, x:Alert, x:ArchivedItem, x:MaskedEmail, x:Metric, x:MetricsStore, x:SpamAi, x:Tenant, x:Trace, x:TracingStore.
 Runtime enterprise gate (`crates/jmap/src/registry/mod.rs:20-30`) covers only: x:MaskedEmail, x:ArchivedItem, x:Metric, x:Trace.
 Standard (non-`x:`) schema objects: AddressBook, Calendar, Mailbox, Principal, SieveScript, VacationResponse.
 
 ## 4. Proposed work packages
 
-11 packages covering all 308 in-scope rows (71 §1 + 94 §2 + 144 §3;
+11 packages covering all 314 in-scope rows (74 §1 + 94 §2 + 147 §3;
 `GET /logo` is §5). Every package depends on the shared core (`src/jmap`,
 `src/client`); packages 2–6 additionally depend on package 1 for session
 handling, packages 8–11 additionally depend on package 7 for the generic
@@ -538,15 +567,15 @@ enterprise/side-effect handling).
 | 2   | `mail`            | `src/mailboxes/`, `src/threads/`, `src/emails/`, `src/searchSnippets/`, `src/identities/`, `src/emailSubmissions/`, `src/vacationResponses/`, `src/wellKnown/`    | 36 (§2: 26 mail methods; §1: 5 wk discovery + 1 mail config + 2 autodiscover + 1 well-known OPTIONS + 1 form)   | 1                   | M      | send path needs `Identity/get` → `Email/set` + `EmailSubmission/set` wiring; `POST /form/*` anonymous rate-limited                                                                                                                                       |
 | 3   | `groupware-cal`   | `src/principals/`, `src/calendars/`, `src/calendarEvents/`, `src/calendarEventNotifications/`, `src/participantIdentities/`, `src/wellKnown/`                     | 29 (§2: 25; §1: caldav + carddav + calendar-rsvp + api-calendar-rsvp)                                           | 1                   | M      | `getAvailability` needs the `:availability` URN; RSVP spans a static page + a JSON API                                                                                                                                                                   |
 | 4   | `groupware-share` | `src/sieveScripts/`, `src/blobs/`, `src/quotas/`, `src/pushSubscriptions/`, `src/addressBooks/`, `src/contactCards/`, `src/fileNodes/`, `src/shareNotifications/` | 36 (§2)                                                                                                         | 1                   | M      | `:parse` capabilities for `ContactCard/parse`; blob method-form vs HTTP-form uploads; `ShareNotification` rides the principals capability                                                                                                                |
-| 5   | `auth-oauth`      | `src/oauth/`, `src/management/` (login/discover/account/schema), `src/live/`                                                                                      | 22 (§1: 3 wk-oauth + 7 auth + login/device pages + api/auth + discover + account + 2 schema + 3 token + 3 live) | 1                   | M      | OAuth grant types incl. device flow, PKCE S256, `client_secret_basic/post`/`none`; live token→SSE `?token=` handoff; login/device pages are static (no helper)                                                                                           |
+| 5   | `auth-oauth`      | `src/oauth/`, `src/management/` (login/discover/account/schema), `src/live/`                                                                                      | 25 (§1: 3 wk-oauth + 9 auth + login/device pages + api/auth + api-auth-client + discover + account + 2 schema + 3 token + 3 live) | 1                   | M      | OAuth grant types incl. device flow, PKCE S256, `client_secret_basic/post`/`none`; v1 revoke/logout/client-info; live token→SSE `?token=` handoff; login/device pages are static (no helper)                                                                                           |
 | 6   | `scim`            | `src/scim/`                                                                                                                                                       | 21 (§1: 20 SCIM + 1 DAV-out-of-scope note)                                                                      | 1                   | M      | enterprise-gated: must surface 4xx on community, not retry; `Me` → 501 pinned; no local verification possible beyond error shape                                                                                                                         |
-| 7   | `reg-directory`   | `src/registry/` (+ generic helpers)                                                                                                                               | 16 (§3: 14 types + 2 views)                                                                                     | 1                   | S      | builds generic `registryGet/Set/Query` + `account*`, credential (`account_set`) and `@type: User/Group, Ldap/Sql/Oidc` variants first; `MaskedEmail` enterprise-gated                                                                                    |
+| 7   | `reg-directory`   | `src/registry/` (+ generic helpers)                                                                                                                               | 17 (§3: 15 types + 2 views)                                                                                     | 1                   | S      | builds generic `registryGet/Set/Query` + `account*`, credential (`account_set`) and `@type: User/Group, Ldap/Sql/Oidc` variants first; `MaskedEmail` enterprise-gated; v1 `OAuthGrant` (connected apps)                                                                                    |
 | 8   | `reg-domains-mta` | `src/registry/`                                                                                                                                                   | 30 (§3: 28 types + 2 views)                                                                                     | 1, 7                | M      | `QueuedMessage` special query/set; `MtaRoute`/`DnsServer` large `@type` unions; many singletons (`ids: ["singleton"]`)                                                                                                                                   |
 | 9   | `reg-filtering`   | `src/registry/`                                                                                                                                                   | 34 (§3: 26 types + 8 views)                                                                                     | 1, 7                | M      | `SpamTrainingSample` special query/set; sieve/report singletons; 8 views ride along                                                                                                                                                                      |
-| 10  | `reg-data`        | `src/registry/`                                                                                                                                                   | 32 (§3: 24 types + 8 views)                                                                                     | 1, 7                | M      | 5 report types share `report_query`/`report_set`; `Log/Metric/Trace/ClusterNode` read-only; `ArchivedItem/Metric/Trace` (+`Alert`, stores) enterprise-gated on community                                                                                 |
-| 11  | `reg-system`      | `src/registry/`                                                                                                                                                   | 32 (§3: 25 types + 7 views)                                                                                     | 1, 7                | M      | `Action` create-only (query rejected, update/destroy fail) with 11 `@type` side effects (`PauseMtaQueue` etc. — never run destructive ones in e2e); `Task` special query/set; `Bootstrap` bootstrap-mode-only; resolve the 3 barrel-name collisions (§3) |
+| 10  | `reg-data`        | `src/registry/`                                                                                                                                                   | 33 (§3: 25 types + 8 views)                                                                                     | 1, 7                | M      | 5 report types share `report_query`/`report_set`; `Log/Metric/Trace/ClusterNode` read-only; `ArchivedItem/Metric/Trace` (+`Alert`, stores) enterprise-gated on community; v1 `IndexQueueStatus`                                                                                 |
+| 11  | `reg-system`      | `src/registry/`                                                                                                                                                   | 33 (§3: 26 types + 7 views)                                                                                     | 1, 7                | M      | `Action` create-only (query rejected, update/destroy fail) with 11 `@type` side effects (`PauseMtaQueue` etc. — never run destructive ones in e2e); `Task` special query/set; `Bootstrap` bootstrap-mode-only; v1 `Metadata` singleton; resolve the 3 barrel-name collisions (§3) |
 
-Row arithmetic: 20+36+29+36+22+21+16+30+34+32+32 = 308; plus `GET /logo` (§5) = 309 total rows.
+Row arithmetic: 20+36+29+36+25+21+17+30+34+33+33 = 314; plus `GET /logo` (§5) = 315 total rows.
 
 ## 5. Out of scope
 

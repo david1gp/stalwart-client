@@ -51,7 +51,7 @@ Auth recap (verified in Stalwart source at `crates/http/src/auth/authenticate.rs
 - `config.token` is used only when username/password are not both set
   (Basic wins).
 
-## 2. JMAP protocol essentials (verified against Stalwart source @ aa47d8ef)
+## 2. JMAP protocol essentials (verified against Stalwart source @ v1.0.1 / 23b69755)
 
 - `GET /.well-known/jmap` → 307 to `/jmap/session`; `GET /jmap/session` → JMAP
   Session (RFC 8620 §2). `jmapSessionGet` caches per `JmapSessionCache`;
@@ -71,7 +71,9 @@ Auth recap (verified in Stalwart source at `crates/http/src/auth/authenticate.rs
   Calendar/CalendarEvent/CalendarEventNotification/ParticipantIdentity →
   `…:calendars`; AddressBook/ContactCard → `…:contacts`; FileNode →
   `…:filenode`; `Core/echo` → core only. `x:*` → `urn:stalwart:jmap` via the
-  client-layer resolver.
+  client-layer resolver. v1 object metadata (`metadata`/`privateMetadata`
+  properties + the six metadata query filters) needs
+  `urn:ietf:params:jmap:metadata` in `using` on top — see `jmapMetadataUsing`.
 - `accountId` resolution (`jmapAccountIdResolve`): explicit arg ?? 
   `config.accountId` ?? `session.primaryAccounts[capability]`. Stalwart
   auto-fills Core/PushSubscription/registry methods with the caller's account
@@ -81,7 +83,7 @@ Auth recap (verified in Stalwart source at `crates/http/src/auth/authenticate.rs
   `downloadUrl` (`/jmap/download/{accountId}/{blobId}/{name}?accept=`).
 - Registry filters: property equal, or `<prop>Is{GreaterThan,
   GreaterThanOrEqual, LessThan, LessThanOrEqual}`
-  (`crates/jmap-proto/src/object/registry.rs`). 117 `x:*` object types;
+  (`crates/jmap-proto/src/object/registry.rs`). 120 `x:*` object types;
   singletons have no `/query` (see the inventory doc for the full table).
 
 ## 3. Per-operation file pattern (copy `coreEcho` exactly)

@@ -2,7 +2,7 @@
 
 Run your Stalwart mail server from TypeScript: send mail, manage calendars and contacts, and automate every server setting — all type-safe, all from one package.
 
-Full JMAP coverage (mail, calendars, address books, files, sharing, quotas, push) plus the complete Stalwart management registry (117 object types), OAuth/OIDC, SCIM 2.0, and live telemetry. Every fallible call returns a `Result`, every input and response is Valibot-validated, and everything is also available as a JSON CLI.
+Full JMAP coverage (mail, calendars, address books, files, sharing, quotas, push, object metadata) plus the complete Stalwart management registry (120 object types), OAuth/OIDC, SCIM 2.0, and live telemetry. Every fallible call returns a `Result`, every input and response is Valibot-validated, and everything is also available as a JSON CLI.
 
 [![npm](https://img.shields.io/npm/v/%40adaptive-ds%2Fstalwart-client)](https://www.npmjs.com/package/@adaptive-ds/stalwart-client)
 [![license](https://img.shields.io/npm/l/%40adaptive-ds%2Fstalwart-client)](./LICENSE)
@@ -90,7 +90,7 @@ if (!configured.success) throw new Error(configured.errorMessage)
 - **Mail (JMAP)** — mailboxes, threads, emails (get/query/set/copy/import/parse/send), search snippets, identities, submissions, vacation responses
 - **Groupware (JMAP)** — principals, calendars, calendar events and notifications, participant identities, Sieve scripts, blobs, quotas, push subscriptions, address books, contact cards, file nodes, share notifications
 - **Transports** — JMAP over HTTP, EventSource (SSE), and WebSocket, plus blob upload/download
-- **Server management (registry)** — all 117 generated Stalwart management object types (domains, DKIM, certificates, MTA, spam, Sieve, lookups, reports, telemetry, storage, cluster, tasks, groupware settings) plus 27 views, with typed get/set/query and a generic escape hatch for the rest
+- **Server management (registry)** — all 120 generated Stalwart management object types (domains, DKIM, certificates, MTA, spam, Sieve, lookups, reports, telemetry, storage, cluster, tasks, groupware settings, OAuth grants, index queues) plus 27 views, with typed get/set/query and a generic escape hatch for the rest
 - **OAuth/OIDC** — discovery, device and authorization-code flows, PKCE helpers, token issuance and introspection, UserInfo, client registration
 - **SCIM 2.0** — users, groups, bulk, search, and service discovery
 - **HTTP helpers** — `.well-known` discovery, Outlook autodiscover, contact forms, calendar RSVP pages, health and Prometheus metrics

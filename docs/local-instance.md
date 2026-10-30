@@ -269,7 +269,7 @@ curl -s -u alice@example.test:<pw> $B/api/account
 #   but NOT sysDomain*/sysAccount* management (those calls → forbidden).
 curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -u admin:… $B/api/schema
 # → 302 /api/schema/<sha256>; GET that (authenticated) → gzipped schema JSON
-#   (150 objects, 317 field entries), Content-Encoding: gzip
+#   (153 objects in v1, Content-Encoding: gzip; 150 pre-v1)
 #   (crates/http/src/api/mod.rs:117-140).
 curl -s $B/healthz/live   # → {"detail":"OK","status":200,…} (no auth)
 curl -s $B/healthz/ready  # same shape; 503 while storage uninitialized
