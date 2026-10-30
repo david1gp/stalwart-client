@@ -8,6 +8,14 @@ import { registryViews } from "../src/registry/generated/registryViews.js"
 const repoRoot = join(import.meta.dir, "..")
 const generatedDir = join(repoRoot, "src", "registry", "generated")
 
+// The idempotency test regenerates types from the Stalwart machine-readable
+// schema (AGPL, never vendored). CI follows the shared ~/adaptive convention
+// with no network fetch, so the test skips when the schema is absent and
+// only runs where the Stalwart checkout exists (local dev, release prep).
+const schemaPath = join(process.env.HOME ?? "~", "opensource/stalwart/resources/schema/schema.json.gz")
+const hasSchema = await Bun.file(schemaPath).exists()
+const idempotencyTest = hasSchema ? test : test.skip
+
 async function generatedSnapshot(dir: string): Promise<Map<string, string>> {
   const files = (await readdir(dir)).filter((f) => f.endsWith(".ts")).sort()
   const snapshot = new Map<string, string>()
@@ -18,34 +26,38 @@ async function generatedSnapshot(dir: string): Promise<Map<string, string>> {
 }
 
 describe("registry types generation is idempotent, not stale", () => {
-  test("generating into a temp dir equals the committed output", async () => {
-    // Inside the repo: biome refuses to format files outside the project root.
-    const tempDir = await mkdtemp(join(repoRoot, ".tmp-registry-generated-"))
-    try {
-      const proc = Bun.spawn(["bun", "scripts/registryTypesGenerate.ts", "--out", tempDir], {
-        cwd: repoRoot,
-        stdout: "pipe",
-        stderr: "pipe",
-      })
-      const [stdout, stderr, exitCode] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-        proc.exited,
-      ])
-      if (exitCode !== 0) throw new Error(`registryTypesGenerate failed:\n${stdout}\n${stderr}`)
-      const [committed, fresh] = await Promise.all([generatedSnapshot(generatedDir), generatedSnapshot(tempDir)])
-      expect([...fresh.keys()]).toEqual([...committed.keys()])
-      for (const [file, content] of fresh) {
-        const expected = committed.get(file)
-        expect(expected, file).toBeDefined()
-        if (expected !== undefined) {
-          expect(content, file).toBe(expected)
+  idempotencyTest(
+    "generating into a temp dir equals the committed output",
+    async () => {
+      // Inside the repo: biome refuses to format files outside the project root.
+      const tempDir = await mkdtemp(join(repoRoot, ".tmp-registry-generated-"))
+      try {
+        const proc = Bun.spawn(["bun", "scripts/registryTypesGenerate.ts", "--out", tempDir], {
+          cwd: repoRoot,
+          stdout: "pipe",
+          stderr: "pipe",
+        })
+        const [stdout, stderr, exitCode] = await Promise.all([
+          new Response(proc.stdout).text(),
+          new Response(proc.stderr).text(),
+          proc.exited,
+        ])
+        if (exitCode !== 0) throw new Error(`registryTypesGenerate failed:\n${stdout}\n${stderr}`)
+        const [committed, fresh] = await Promise.all([generatedSnapshot(generatedDir), generatedSnapshot(tempDir)])
+        expect([...fresh.keys()]).toEqual([...committed.keys()])
+        for (const [file, content] of fresh) {
+          const expected = committed.get(file)
+          expect(expected, file).toBeDefined()
+          if (expected !== undefined) {
+            expect(content, file).toBe(expected)
+          }
         }
+      } finally {
+        await rm(tempDir, { recursive: true, force: true })
       }
-    } finally {
-      await rm(tempDir, { recursive: true, force: true })
-    }
-  }, 120000)
+    },
+    120000,
+  )
 })
 
 describe("registry types cover all 120 management objects", () => {
