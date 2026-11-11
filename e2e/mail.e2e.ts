@@ -26,7 +26,7 @@ import { threadGet } from "../src/threads/threadGet.js"
 import { vacationResponseGet } from "../src/vacationResponses/vacationResponseGet.js"
 import { vacationResponseSet } from "../src/vacationResponses/vacationResponseSet.js"
 import { e2eRunId } from "./e2eRunId.js"
-import { stalwartE2eSetup } from "./e2eSetup.js"
+import { loadE2eEnv, stalwartE2eSetup } from "./e2eSetup.js"
 
 const runId = e2eRunId()
 const subject = `e2e mail ${runId}`
@@ -34,22 +34,14 @@ const subject = `e2e mail ${runId}`
 let alice: StalwartClientConfig
 let bob: StalwartClientConfig
 
-/** Build an alice/bob user config from the local harness overlay (mirrors e2eSetup.ts parsing). */
+/** Build an alice/bob user config from the target-scoped env (no ambient fallback). */
 async function mailE2eUserConfig(user: "A" | "B"): Promise<StalwartClientConfig> {
-  const localFile = Bun.file(new URL("../ops/local-stalwart/.env.local", import.meta.url))
-  const overlay: Record<string, string> = {}
-  for (const line of (await localFile.text()).split("\n")) {
-    const trimmed = line.trim()
-    if (trimmed === "" || trimmed.startsWith("#")) continue
-    const eq = trimmed.indexOf("=")
-    if (eq < 0) continue
-    overlay[trimmed.slice(0, eq)] = trimmed.slice(eq + 1)
-  }
+  const { env } = await loadE2eEnv()
   const parsed = stalwartClientConfig({
-    baseUrl: overlay.STALWART_BASE_URL ?? "",
-    username: overlay[`STALWART_USER_${user}`],
-    password: overlay[`STALWART_USER_${user}_PASSWORD`],
-    accountId: overlay[`STALWART_USER_${user}_ACCOUNT_ID`],
+    baseUrl: env.STALWART_BASE_URL ?? "",
+    username: env[`STALWART_USER_${user}`],
+    password: env[`STALWART_USER_${user}_PASSWORD`],
+    accountId: env[`STALWART_USER_${user}_ACCOUNT_ID`],
   })
   if (!parsed.success) throw new Error(`mail e2e user ${user} config invalid: ${parsed.errorMessage}`)
   return parsed.data

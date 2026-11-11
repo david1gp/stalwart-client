@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { stalwartClientFromEnv } from "../src/client/stalwartClientFromEnv.js"
 import type { StalwartClientConfig } from "../src/client/stalwartClientConfigSchema.js"
 import type { PromiseResult } from "#result"
 import { actionInvalidateCaches } from "../src/registry/actions/actionInvalidateCaches.js"
@@ -55,28 +54,11 @@ import { taskQuery } from "../src/registry/tasks/taskQuery.js"
 import { webDavGet } from "../src/registry/system/webDavGet.js"
 import { webDavSet } from "../src/registry/system/webDavSet.js"
 import { e2eRunId } from "./e2eRunId.js"
+import { stalwartE2eSetup } from "./e2eSetup.js"
 
-/** Same overlay parsing as e2eSetup (copied: e2eSetup.ts must stay untouched). */
+/** Target-scoped setup via the central e2e resolver (fail-closed, no ambient fallback). */
 async function regSystemE2eSetup(): Promise<StalwartClientConfig> {
-  let env: Record<string, string | undefined> = process.env
-  if ((process.env.STALWART_E2E_TARGET ?? "live") === "local") {
-    const localFile = Bun.file(new URL("../ops/local-stalwart/.env.local", import.meta.url))
-    if (!(await localFile.exists())) {
-      throw new Error("STALWART_E2E_TARGET=local requires ops/local-stalwart/.env.local")
-    }
-    const overlay: Record<string, string> = {}
-    for (const line of (await localFile.text()).split("\n")) {
-      const trimmed = line.trim()
-      if (trimmed === "" || trimmed.startsWith("#")) continue
-      const eq = trimmed.indexOf("=")
-      if (eq < 0) continue
-      overlay[trimmed.slice(0, eq)] = trimmed.slice(eq + 1)
-    }
-    env = { ...process.env, ...overlay }
-  }
-  const configured = stalwartClientFromEnv(env)
-  if (!configured.success) throw new Error(`Unable to initialize the e2e config: ${configured.errorMessage}`)
-  return configured.data
+  return stalwartE2eSetup()
 }
 
 let config: StalwartClientConfig

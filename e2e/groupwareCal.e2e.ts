@@ -27,7 +27,7 @@ import { principalSet } from "../src/principals/principalSet.js"
 import { stalwartClientConfig } from "../src/client/stalwartClientConfig.js"
 import type { StalwartClientConfig } from "../src/client/stalwartClientConfigSchema.js"
 import { e2eRunId } from "./e2eRunId.js"
-import { stalwartE2eSetup } from "./e2eSetup.js"
+import { loadE2eEnv, stalwartE2eSetup } from "./e2eSetup.js"
 
 const runId = e2eRunId()
 const calendarName = `e2e-${runId}`
@@ -39,25 +39,9 @@ let bobEmail = ""
 const created: { calendarId?: string; eventId?: string; notificationIds: string[] } = { notificationIds: [] }
 let bobPrincipalId = ""
 
-/** Same overlay parsing as `e2eSetup.ts` (kept local — `e2eSetup.ts` is off-limits). */
+/** Target-scoped env via the central e2e resolver (fail-closed, no ambient fallback). */
 async function groupwareCalOverlayEnv(): Promise<Record<string, string | undefined>> {
-  const target = process.env.STALWART_E2E_TARGET ?? "live"
-  let env: Record<string, string | undefined> = process.env
-  if (target === "local") {
-    const localFile = Bun.file(new URL("../ops/local-stalwart/.env.local", import.meta.url))
-    if (!(await localFile.exists())) {
-      throw new Error("STALWART_E2E_TARGET=local requires ops/local-stalwart/.env.local")
-    }
-    const overlay: Record<string, string> = {}
-    for (const line of (await localFile.text()).split("\n")) {
-      const trimmed = line.trim()
-      if (trimmed === "" || trimmed.startsWith("#")) continue
-      const eq = trimmed.indexOf("=")
-      if (eq < 0) continue
-      overlay[trimmed.slice(0, eq)] = trimmed.slice(eq + 1)
-    }
-    env = { ...process.env, ...overlay }
-  }
+  const { env } = await loadE2eEnv()
   return env
 }
 
@@ -271,7 +255,12 @@ describe("e2e groupwareCal: principals, calendars, events, notifications, identi
     "CalendarEvent/parse parses an uploaded .ics blob",
     async () => {
       const env = await groupwareCalOverlayEnv()
-      const blobId = await groupwareCalUploadText(alice, env.STALWART_USER_A ?? "", env.STALWART_USER_A_PASSWORD ?? "")
+      const uploadUser = env.STALWART_USER_A
+      const uploadSecret = env.STALWART_USER_A_PASSWORD
+      if (uploadUser === undefined || uploadSecret === undefined) {
+        throw new Error("missing STALWART_USER_A credentials for upload")
+      }
+      const blobId = await groupwareCalUploadText(alice, uploadUser, uploadSecret)
       const r = await calendarEventParse({ config: alice, blobIds: [blobId] })
       if (!r.success) throw new Error(r.errorMessage)
       const entries = r.data.parsed?.[blobId]

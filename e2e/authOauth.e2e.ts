@@ -23,7 +23,7 @@ import { oidcMetadata } from "../src/oauth/oidcMetadata.js"
 import { oidcUserinfo } from "../src/oauth/oidcUserinfo.js"
 import { registrySet } from "../src/registry/registrySet.js"
 import { e2eRunId } from "./e2eRunId.js"
-import { stalwartE2eSetup } from "./e2eSetup.js"
+import { loadE2eEnv, stalwartE2eSetup } from "./e2eSetup.js"
 
 let adminConfig: StalwartClientConfig
 let aliceConfig: StalwartClientConfig
@@ -46,22 +46,12 @@ function requireConfig(result: ReturnType<typeof stalwartClientConfig>): Stalwar
 
 beforeAll(async () => {
   adminConfig = await stalwartE2eSetup()
-  // Overlay parsing copied from e2eSetup.ts (that module only returns the admin config).
-  const overlay: Record<string, string> = {}
-  if ((process.env.STALWART_E2E_TARGET ?? "live") === "local") {
-    const localFile = Bun.file(new URL("../ops/local-stalwart/.env.local", import.meta.url))
-    for (const line of (await localFile.text()).split("\n")) {
-      const trimmed = line.trim()
-      if (trimmed === "" || trimmed.startsWith("#")) continue
-      const eq = trimmed.indexOf("=")
-      if (eq < 0) continue
-      overlay[trimmed.slice(0, eq)] = trimmed.slice(eq + 1)
-    }
-  }
-  aliceName = overlay.STALWART_USER_A ?? process.env.STALWART_USER_A ?? ""
-  aliceSecret = overlay.STALWART_USER_A_PASSWORD ?? process.env.STALWART_USER_A_PASSWORD ?? ""
-  bobName = overlay.STALWART_USER_B ?? process.env.STALWART_USER_B ?? ""
-  if (!aliceName || !aliceSecret || !bobName) throw new Error("e2e user credentials missing from overlay/env")
+  // Target-scoped user credentials via the central resolver (no ambient fallback).
+  const { env } = await loadE2eEnv()
+  aliceName = env.STALWART_USER_A ?? ""
+  aliceSecret = env.STALWART_USER_A_PASSWORD ?? ""
+  bobName = env.STALWART_USER_B ?? ""
+  if (!aliceName || !aliceSecret || !bobName) throw new Error("e2e user credentials missing for the resolved target")
   aliceConfig = requireConfig(
     stalwartClientConfig({ baseUrl: adminConfig.baseUrl, username: aliceName, password: aliceSecret }),
   )

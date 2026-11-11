@@ -42,7 +42,7 @@ import { sieveScriptQuery } from "../src/sieveScripts/sieveScriptQuery.js"
 import { sieveScriptSet } from "../src/sieveScripts/sieveScriptSet.js"
 import { sieveScriptValidate } from "../src/sieveScripts/sieveScriptValidate.js"
 import { e2eRunId } from "./e2eRunId.js"
-import { stalwartE2eSetup } from "./e2eSetup.js"
+import { loadE2eEnv, stalwartE2eSetup } from "./e2eSetup.js"
 
 let alice: StalwartClientConfig
 let bob: StalwartClientConfig
@@ -64,23 +64,10 @@ const created: {
   notificationIds?: string[]
 } = {}
 
-/** Same overlay parsing as e2eSetup.ts, for the user-scoped configs. */
+/** Target-scoped env via the central e2e resolver (fail-closed, no ambient fallback). */
 async function groupwareEnv(): Promise<Record<string, string | undefined>> {
-  const target = process.env.STALWART_E2E_TARGET ?? "live"
-  if (target !== "local") return process.env
-  const localFile = Bun.file(new URL("../ops/local-stalwart/.env.local", import.meta.url))
-  if (!(await localFile.exists())) {
-    throw new Error("STALWART_E2E_TARGET=local requires ops/local-stalwart/.env.local")
-  }
-  const overlay: Record<string, string> = {}
-  for (const line of (await localFile.text()).split("\n")) {
-    const trimmed = line.trim()
-    if (trimmed === "" || trimmed.startsWith("#")) continue
-    const eq = trimmed.indexOf("=")
-    if (eq < 0) continue
-    overlay[trimmed.slice(0, eq)] = trimmed.slice(eq + 1)
-  }
-  return { ...process.env, ...overlay }
+  const { env } = await loadE2eEnv()
+  return env
 }
 
 function mustSuccess<T>(r: Result<T>, what: string): asserts r is ResultOk<T> {

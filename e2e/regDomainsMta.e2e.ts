@@ -79,7 +79,7 @@ import { queuedMessageGet } from "../src/registry/mta/queuedMessageGet.js"
 import { queuedMessageQuery } from "../src/registry/mta/queuedMessageQuery.js"
 import { queuedMessageRetry } from "../src/registry/mta/queuedMessageRetry.js"
 import { e2eRunId } from "./e2eRunId.js"
-import { stalwartE2eSetup } from "./e2eSetup.js"
+import { loadE2eEnv, stalwartE2eSetup } from "./e2eSetup.js"
 
 let config: StalwartClientConfig
 let aliceConfig: StalwartClientConfig
@@ -104,24 +104,18 @@ function fail(message: string, result: { success: boolean; errorMessage?: string
   )
 }
 
-/** Read the local-harness overlay for the user credentials (mirrors e2eSetup.ts, which only returns the admin config). */
+/** Read target-scoped user credentials via the central resolver (no ambient fallback). */
 async function e2eUserConfig(): Promise<{ config: StalwartClientConfig; accountId: string }> {
-  const localFile = Bun.file(new URL("../ops/local-stalwart/.env.local", import.meta.url))
-  const overlay: Record<string, string> = {}
-  for (const line of (await localFile.text()).split("\n")) {
-    const trimmed = line.trim()
-    if (trimmed === "" || trimmed.startsWith("#")) continue
-    const eq = trimmed.indexOf("=")
-    if (eq < 0) continue
-    overlay[trimmed.slice(0, eq)] = trimmed.slice(eq + 1)
-  }
+  const { env } = await loadE2eEnv()
   const parsed = stalwartClientConfig({
-    baseUrl: overlay.STALWART_BASE_URL ?? process.env.STALWART_BASE_URL ?? "",
-    username: overlay.STALWART_USER_A ?? process.env.STALWART_USER_A,
-    password: overlay.STALWART_USER_A_PASSWORD ?? process.env.STALWART_USER_A_PASSWORD,
+    baseUrl: env.STALWART_BASE_URL ?? "",
+    username: env.STALWART_USER_A,
+    password: env.STALWART_USER_A_PASSWORD,
   })
   if (!parsed.success) throw new Error(`user config invalid: ${parsed.errorMessage}`)
-  return { config: parsed.data, accountId: overlay.STALWART_USER_A_ACCOUNT_ID ?? "" }
+  const accountId = env.STALWART_USER_A_ACCOUNT_ID ?? ""
+  if (accountId === "") throw new Error("e2e user account missing for the resolved target")
+  return { config: parsed.data, accountId }
 }
 
 beforeAll(async () => {
