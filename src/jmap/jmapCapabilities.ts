@@ -17,6 +17,7 @@ export const jmapCapabilities = {
   fileNode: "urn:ietf:params:jmap:filenode",
   webSocket: "urn:ietf:params:jmap:websocket",
   emailPush: "urn:ietf:params:jmap:emailpush",
+  mdn: "urn:ietf:params:jmap:mdn",
   mailShare: "urn:ietf:params:jmap:mail:share",
   webPushVapid: "urn:ietf:params:jmap:webpush-vapid",
   metadata: "urn:ietf:params:jmap:metadata",

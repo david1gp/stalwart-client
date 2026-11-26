@@ -18,6 +18,7 @@ export function jmapMethodCapabilities(methodName: string, ...resolvers: JmapCap
     "PushSubscription",
     "Identity",
     "EmailSubmission",
+    "MDN",
     "VacationResponse",
     "SieveScript",
     "Principal",
@@ -60,6 +61,9 @@ export function jmapMethodCapabilities(methodName: string, ...resolvers: JmapCap
     case "VacationResponse":
       using.add(jmapCapabilities.vacationResponse)
       break
+    case "MDN":
+      using.add(jmapCapabilities.mdn)
+      break
     case "SieveScript":
       using.add(jmapCapabilities.sieve)
       break
@@ -91,6 +95,7 @@ export function jmapMethodCapabilities(methodName: string, ...resolvers: JmapCap
   }
   // Method-level extension capabilities (draft-ietf-jmap-calendars / -contacts / -principals).
   if (methodName === "Principal/getAvailability") using.add(jmapCapabilities.principalsAvailability)
+  if (methodName === "MDN/send") using.add(jmapCapabilities.mail)
   if (methodName === "CalendarEvent/parse") using.add(jmapCapabilities.calendarsParse)
   if (methodName === "ContactCard/parse") using.add(jmapCapabilities.contactsParse)
   for (const resolve of resolvers) {
