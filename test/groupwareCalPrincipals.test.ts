@@ -176,6 +176,44 @@ describe("groupwareCal principals ops", () => {
     ])
   })
 
+  test("principalGetAvailability forwards showDetails/eventProperties and surfaces accountId", async () => {
+    const m = mockMethodResponse("Principal/getAvailability", {
+      list: [
+        {
+          utcStart: "2026-10-26T01:00:00Z",
+          utcEnd: "2026-10-26T02:00:00Z",
+          busyStatus: "confirmed",
+          accountId: "a1",
+          event: null,
+        },
+      ],
+    })
+    mock = m.mock
+    const r = await principalGetAvailability({
+      config: config.data,
+      accountId: "a1",
+      id: "p1",
+      utcStart: "2026-10-26T00:00:00Z",
+      utcEnd: "2026-10-27T00:00:00Z",
+      showDetails: true,
+      eventProperties: ["id", "title"],
+    })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.list[0]?.accountId).toBe("a1")
+    expect(m.sent[0]?.methodCalls[0]).toEqual([
+      "Principal/getAvailability",
+      {
+        accountId: "a1",
+        id: "p1",
+        utcStart: "2026-10-26T00:00:00Z",
+        utcEnd: "2026-10-27T00:00:00Z",
+        showDetails: true,
+        eventProperties: ["id", "title"],
+      },
+      "c1",
+    ])
+  })
+
   test("invalid options are a ResultErr with the op name", async () => {
     const m = mockMethodResponse("Principal/query", {})
     mock = m.mock

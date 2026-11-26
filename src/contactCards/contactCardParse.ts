@@ -6,10 +6,10 @@ import { contactCardAccountIdResolve } from "./contactCardAccountIdResolve.js"
 import { contactCardParseOptionsSchema, type ContactCardParseOptions } from "./contactCardParseOptionsSchema.js"
 import type { ContactCard } from "./ContactCard.js"
 
-/** `ContactCard/parse` response (`ParseResponse`, `crates/jmap-proto/src/method/parse.rs`). */
+/** `ContactCard/parse` response (`ParseResponse`, `crates/jmap-proto/src/method/parse.rs`). Each blob id maps to its list of parsed cards. */
 export type ContactCardParseResult = {
   accountId: string | number
-  parsed?: Record<string, ContactCard>
+  parsed?: Record<string, ContactCard[]>
   notParsable?: readonly string[]
   notFound?: readonly string[]
 }

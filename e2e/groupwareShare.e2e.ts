@@ -281,7 +281,7 @@ describe("e2e groupware-share: quota and push as alice", () => {
         },
       })
       expect(s.success).toBe(false)
-      if (!s.success) expect(s.errorMessage).toContain("URL must use the https scheme")
+      if (!s.success) expect(s.errorMessage).toContain("URL scheme is not permitted")
     },
     { timeout: 30_000 },
   )
@@ -343,7 +343,9 @@ describe("e2e groupware-share: address book share alice to bob", () => {
       mustSuccess(up, "vcard upload")
       const p = await contactCardParse({ config: alice, blobIds: [up.data.blobId] })
       mustSuccess(p, "contact parse")
-      const parsed = p.data.parsed?.[up.data.blobId] as Record<string, unknown>
+      const parsedList = p.data.parsed?.[up.data.blobId] as unknown as Array<Record<string, unknown>>
+      expect(parsedList?.length).toBeGreaterThan(0)
+      const parsed = parsedList?.[0] as Record<string, unknown>
       expect(parsed?.uid ?? parsed?.UID).toBeDefined()
       const s = await contactCardSet({
         config: alice,
@@ -366,7 +368,7 @@ describe("e2e groupware-share: address book share alice to bob", () => {
       // Same-account copies are rejected server-side; pin the error shape.
       const cp = await contactCardCopy({ config: alice, create: { k2: { id: created.cardId as string } } })
       expect(cp.success).toBe(false)
-      if (!cp.success) expect(cp.errorMessage).toContain("From accountId is equal")
+      if (!cp.success) expect(cp.errorMessage).toContain("accountId must differ from fromAccountId")
     },
     { timeout: 60_000 },
   )
@@ -395,7 +397,7 @@ describe("e2e groupware-share: address book share alice to bob", () => {
       // Same-account copies are rejected server-side; pin the error shape.
       const cp = await fileNodeCopy({ config: alice, create: { f2: { id: created.fileId as string } } })
       expect(cp.success).toBe(false)
-      if (!cp.success) expect(cp.errorMessage).toContain("From accountId is equal")
+      if (!cp.success) expect(cp.errorMessage).toContain("accountId must differ from fromAccountId")
     },
     { timeout: 60_000 },
   )

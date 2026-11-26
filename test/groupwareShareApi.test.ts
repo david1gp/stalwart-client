@@ -75,15 +75,15 @@ describe("sieveScript ops send the sieve capability and resolved accountId", () 
 
   test("sieveScriptSet turns a notCreated entry into a ResultErr", async () => {
     const m = mockMethod("SieveScript/set", {
-      notCreated: { c1: { type: "invalidScript", description: "line 1: unknown command" } },
+      notCreated: { c1: { type: "invalidSieve", description: "line 1: unknown command" } },
     })
     mock = m.mock
     const r = await sieveScriptSet({ config: config.data, accountId: "a1", create: { c1: { name: "bad" } } })
     expect(r.success).toBe(false)
     if (!r.success) {
       expect(r.op).toBe("sieveScriptSet")
-      expect(r.errorMessage).toContain("invalidScript")
-      expect(JSON.parse(r.errorData ?? "{}").notCreated.c1.type).toBe("invalidScript")
+      expect(r.errorMessage).toContain("invalidSieve")
+      expect(JSON.parse(r.errorData ?? "{}").notCreated.c1.type).toBe("invalidSieve")
     }
   })
 

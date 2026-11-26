@@ -334,7 +334,6 @@ describe("e2e directory: roles, mailing lists, oauth clients, public keys", () =
         publicKey: {
           accountId: created.userId as string,
           description: `e2e key ${runId}`,
-          emailAddresses: { [userEmail]: true },
           key: TEST_PGP_PUBLIC_KEY,
         },
       })
@@ -519,11 +518,11 @@ describe("e2e directory: singletons, enterprise pins and external directories", 
   )
 
   test(
-    "maskedEmailQuery pins the community-edition enterprise gate",
+    "maskedEmailQuery answers with an empty list on community v1.2.1",
     async () => {
       const r = await maskedEmailQuery({ config })
-      expect(r.success).toBe(false)
-      if (!r.success) expect(r.errorMessage).toContain("Enterprise")
+      if (!r.success) throw new Error(`maskedEmailQuery failed: ${r.errorMessage}`)
+      expect(r.data.ids).toEqual([])
     },
     { timeout: 30_000 },
   )

@@ -15,8 +15,11 @@ export type SieveScriptValidateResult = {
 
 /**
  * `SieveScript/validate` — compile-check a script stored in `blobId`
- * without changing state (`crates/jmap/src/sieve/validate.rs`). Success
- * carries the envelope; inspect `error` (null means valid).
+ * without changing state (`crates/jmap/src/sieve/validate.rs:24-46`). Success
+ * carries the envelope; inspect `error` (null means valid). A non-null error
+ * is a set error: `invalidSieve` with the compiler message in `description`,
+ * or `blobNotFound` for a missing/invalid `blobId`
+ * (`crates/jmap-proto/src/error/set.rs:86,110`).
  */
 export async function sieveScriptValidate(
   options: SieveScriptValidateOptions,

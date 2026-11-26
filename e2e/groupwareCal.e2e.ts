@@ -281,7 +281,7 @@ describe("e2e groupwareCal: principals, calendars, events, notifications, identi
         create: { [created.eventId as string]: {} },
       })
       expect(r.success).toBe(false)
-      if (!r.success) expect(r.errorMessage).toContain("From accountId is equal to fromAccountId")
+      if (!r.success) expect(r.errorMessage).toContain("accountId must differ from fromAccountId")
     },
     { timeout: 30_000 },
   )

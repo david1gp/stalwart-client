@@ -207,14 +207,14 @@ describe("contactCard ops", () => {
 
   test("contactCardParse sends blob ids", async () => {
     const m = mockMethod("ContactCard/parse", {
-      parsed: { b1: { "@type": "Card", uid: "u1" } },
+      parsed: { b1: [{ "@type": "Card", uid: "u1" }] },
       notParsable: [],
       notFound: [],
     })
     mock = m.mock
     const r = await contactCardParse({ config: config.data, accountId: "a1", blobIds: ["b1"] })
     expect(r.success).toBe(true)
-    if (r.success) expect(r.data.parsed?.b1?.uid).toBe("u1")
+    if (r.success) expect(r.data.parsed?.b1?.[0]?.uid).toBe("u1")
     expect(m.sent[0]?.methodCalls[0]?.[1]).toEqual({ accountId: "a1", blobIds: ["b1"] })
   })
 
