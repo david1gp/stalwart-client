@@ -3,8 +3,8 @@
  * section of `docs/api-inventory.md`.
  *
  * Reads `~/opensource/stalwart/resources/schema/schema.json.gz` with
- * `Bun.gunzipSync` (Stalwart HEAD `23b69755`, v1.0.1) and prints markdown to stdout.
- * Paste the output into `docs/api-inventory.md` §3.
+ * `Bun.gunzipSync` (Stalwart tag v1.2.1, commit `0b1342ed`) and prints
+ * markdown to stdout. Paste the output into `docs/api-inventory.md` §3.
  *
  * Per-object data comes from the schema file (`objects` entry: `type`,
  * `description`, `permissionPrefix`, `enterprise`; `schemas` entry for
@@ -13,9 +13,9 @@
  * Stalwart source — each carries its `crates/...:line` reference — because
  * that behavior is not encoded in the schema file.
  *
- * Cross-checks enforced here: 120 `ObjectType` variants
- * (`crates/registry/src/schema/properties.rs`), 153 schema `objects`
- * (120 types + 27 views + 6 standard JMAP objects).
+ * Cross-checks enforced here: 130 `ObjectType` variants
+ * (`crates/registry/src/schema/properties.rs`), 168 schema `objects`
+ * (130 types + 32 views + 6 standard JMAP objects).
  */
 
 const SCHEMA_GZ = `${process.env.HOME}/opensource/stalwart/resources/schema/schema.json.gz`
@@ -41,9 +41,9 @@ const viewKeys = xKeys.filter((k) => k.includes("/"))
 const typeKeys = xKeys.filter((k) => !k.includes("/"))
 const stdKeys = objectKeys.filter((k) => !k.startsWith("x:"))
 
-if (typeKeys.length !== 120) throw new Error(`expected 120 registry types, got ${typeKeys.length}`)
-if (viewKeys.length !== 27) throw new Error(`expected 27 views, got ${viewKeys.length}`)
-if (objectKeys.length !== 153) throw new Error(`expected 153 schema objects, got ${objectKeys.length}`)
+if (typeKeys.length !== 130) throw new Error(`expected 130 registry types, got ${typeKeys.length}`)
+if (viewKeys.length !== 32) throw new Error(`expected 32 views, got ${viewKeys.length}`)
+if (objectKeys.length !== 168) throw new Error(`expected 168 schema objects, got ${objectKeys.length}`)
 
 // --- curated behavioral marks (source-ref'd; not in the schema file) ---
 
@@ -115,6 +115,7 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "OAuthGrant",
       "ApiKey",
       "AppPassword",
+      "Passkey",
       "MaskedEmail",
       "PublicKey",
       "Directory",
@@ -169,6 +170,9 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "SpamSettings",
       "SpamTag",
       "SpamTrainingSample",
+      "MailRule",
+      "BlockedSender",
+      "SafeSender",
       "Asn",
       "MemoryLookupKey",
       "MemoryLookupKeyValue",
@@ -216,6 +220,9 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "MetricsStore",
       "TracingStore",
       "EventTracingLevel",
+      "ExternalPublicKey",
+      "SymmetricKey",
+      "SmimeTrustAnchor",
     ],
   },
   {
@@ -236,13 +243,16 @@ const AREAS: { name: string; folder: string; members: string[] }[] = [
       "Imap",
       "Jmap",
       "WebDav",
+      "Exchange",
       "Security",
       "Sharing",
       "Metadata",
       "Email",
+      "Encryption",
       "Calendar",
       "CalendarAlarm",
       "CalendarScheduling",
+      "CalendarSettings",
       "AddressBook",
       "AiModel",
       "Application",
@@ -320,7 +330,7 @@ out.push(
   `Thin typed helpers (\`domainGet\`/\`domainSet\`/\`domainQuery\`, …) are all built on generic`,
   `\`registryGet\` / \`registrySet\` / \`registryQuery({objectType})\`. Folder for every row: \`src/registry/\`.`,
   ``,
-  `Counts: 120 registry types + 27 views + 6 standard objects = 153 schema objects.`,
+  `Counts: 130 registry types + 32 views + 6 standard objects = 168 schema objects.`,
   ``,
 )
 for (const area of AREAS) {
@@ -334,8 +344,8 @@ for (const area of AREAS) {
   out.push(``)
 }
 out.push(
-  `Cross-checks: \`crates/registry/src/schema/properties.rs\` enum has 120 variants;`,
-  `\`resources/schema/schema.json.gz\` has 153 \`objects\` keys (147 \`x:*\` + 6 standard).`,
+  `Cross-checks: \`crates/registry/src/schema/properties.rs\` enum has 130 variants;`,
+  `\`resources/schema/schema.json.gz\` has 168 \`objects\` keys (162 \`x:*\` + 6 standard).`,
   `Schema \`enterprise\` flag is set on: ${Object.keys(schema.objects)
     .filter((k) => schema.objects[k].enterprise)
     .join(", ")}.`,
