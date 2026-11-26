@@ -18,6 +18,7 @@ import { searchSnippetCommands } from "../searchSnippets/cli/searchSnippetComman
 import { identityCommands } from "../identities/cli/identityCommands.js"
 import { emailSubmissionCommands } from "../emailSubmissions/cli/emailSubmissionCommands.js"
 import { vacationResponseCommands } from "../vacationResponses/cli/vacationResponseCommands.js"
+import { mdnCommands } from "../mdn/cli/mdnCommands.js"
 import { domainsCommands } from "../registry/domains/cli/domainsCommands.js"
 import { mtaCommands } from "../registry/mta/cli/mtaCommands.js"
 import { systemCommands } from "../registry/system/cli/systemCommands.js"
@@ -41,6 +42,7 @@ import { sieveScriptsCommands } from "../sieveScripts/cli/sieveScriptsCommands.j
 import { blobsCommands } from "../blobs/cli/blobsCommands.js"
 import { quotasCommands } from "../quotas/cli/quotasCommands.js"
 import { pushSubscriptionsCommands } from "../pushSubscriptions/cli/pushSubscriptionsCommands.js"
+import { passkeysCommands } from "../passkeys/cli/passkeysCommands.js"
 import { addressBooksCommands } from "../addressBooks/cli/addressBooksCommands.js"
 import { contactCardsCommands } from "../contactCards/cli/contactCardsCommands.js"
 import { fileNodesCommands } from "../fileNodes/cli/fileNodesCommands.js"
@@ -64,6 +66,7 @@ const routes = buildRouteMap({
     identity: identityCommands,
     submission: emailSubmissionCommands,
     vacation: vacationResponseCommands,
+    mdn: mdnCommands,
     registry: registryCommands,
     oauth: oauthCommands,
     management: managementCommands,
@@ -92,6 +95,7 @@ const routes = buildRouteMap({
     blob: blobsCommands,
     quota: quotasCommands,
     push: pushSubscriptionsCommands,
+    passkey: passkeysCommands,
     addressbook: addressBooksCommands,
     contact: contactCardsCommands,
     file: fileNodesCommands,

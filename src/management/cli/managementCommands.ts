@@ -1,4 +1,6 @@
+import { readFile } from "node:fs/promises"
 import { buildCommand, buildRouteMap, type CommandContext } from "@stricli/core"
+import { createResultError } from "#result"
 import { cliConfigFlagParams } from "../../cli/cliConfigFlagParams.js"
 import type { CliConfigFlags } from "../../cli/cliConfigFlags.js"
 import { cliFail } from "../../cli/cliFail.js"
@@ -19,11 +21,27 @@ function managementJsonFlag(brief: string) {
 }
 
 const loginCommand = buildCommand({
-  async func(this: CommandContext, flags: CliConfigFlags & { loginJson?: string }) {
+  async func(this: CommandContext, flags: CliConfigFlags & { loginJson?: string; loginFile?: string }) {
     const op = "managementLogin"
-    const parsed = cliJsonParse(flags.loginJson ?? "{}", op, "loginJson")
+    if (flags.loginJson !== undefined && flags.loginFile !== undefined) {
+      cliFail(createResultError(op, "Pass --loginJson or --loginFile, not both"))
+    }
+    let loginRaw = flags.loginJson ?? "{}"
+    if (flags.loginFile !== undefined) {
+      const loaded = await readFile(flags.loginFile, "utf8").catch((error: unknown) => {
+        cliFail({
+          op,
+          errorMessage: `Cannot read file ${flags.loginFile}`,
+          errorData: error instanceof Error ? error.message : String(error),
+        })
+      })
+      loginRaw = loaded
+    }
+    // Passkey assertions carry base64 secrets: prefer --loginFile so shell
+    // history never sees them, and never echo the payload back.
+    const parsed = cliJsonParse(loginRaw, op, flags.loginFile === undefined ? "loginJson" : "loginFile")
     if (!parsed.success) cliFail(parsed)
-    // Validation stays in the library op; the flag only transports JSON.
+    // Validation stays in the library op; the flags only transport JSON.
     const login = (parsed.data ?? {}) as ManagementLoginOptions["login"]
     await cliRunApi(this, flags, (config) => managementLogin({ config, login }))
   },
@@ -31,6 +49,7 @@ const loginCommand = buildCommand({
     flags: {
       ...cliConfigFlagParams,
       loginJson: managementJsonFlag('Login request as JSON, e.g. {"type":"authCode",…} (default {})'),
+      loginFile: managementJsonFlag("File holding the login request JSON (preferred for passkey assertions)"),
     },
   },
   docs: { brief: "Authenticate for the OAuth flows (POST /api/auth)" },

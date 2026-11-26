@@ -11,7 +11,11 @@ import { managementLoginOptionsSchema, type ManagementLoginOptions } from "./man
  * carrying `?code=&state=&iss=`; exchange the `code` at `POST /auth/token`.
  * `authDevice` approvals answer `verified`; consent-gated logins answer
  * `consentRequired` with a `token` for a follow-up `authConsent` login
- * (`operationId: login` in `api/v1/openapi.yml`).
+ * (`operationId: login` in `api/v1/openapi.yml`). Passkey ceremonies use
+ * `passkeyOptions` (challenge request), `authCodePasskey` / `authDevicePasskey`
+ * (caller's WebAuthn `credential` assertion for the same `query` / `code`),
+ * and answer `passkeyOptions` / `passkeyUnknown` / `expired` / `failure`;
+ * this client never performs the browser ceremony itself.
  */
 export async function managementLogin(options: ManagementLoginOptions): PromiseResult<ManagementLoginResponse> {
   const op = "managementLogin"
