@@ -2,7 +2,9 @@
 
 Run your Stalwart mail server from TypeScript: send mail, manage calendars and contacts, and automate every server setting — all type-safe, all from one package.
 
-Full JMAP coverage (mail, calendars, address books, files, sharing, quotas, push, object metadata) plus the complete Stalwart management registry (120 object types), OAuth/OIDC, SCIM 2.0, and live telemetry. Every fallible call returns a `Result`, every input and response is Valibot-validated, and everything is also available as a JSON CLI.
+Full JMAP coverage (mail, MDN disposition notifications, calendars, availability, address books, files, sharing, quotas, push, object metadata) plus the complete Stalwart management registry (130 object types), passkey login support, OAuth/OIDC, SCIM 2.0, and live telemetry. Every fallible call returns a `Result`, every input and response is Valibot-validated, and everything is also available as a JSON CLI.
+
+Compatible with Stalwart v1.2.1. The registry types are generated from the server's machine-readable schema (never vendored); see [Development and testing](#development-and-testing) for the exact regeneration commands.
 
 [![npm](https://img.shields.io/npm/v/%40adaptive-ds%2Fstalwart-client)](https://www.npmjs.com/package/@adaptive-ds/stalwart-client)
 [![license](https://img.shields.io/npm/l/%40adaptive-ds%2Fstalwart-client)](./LICENSE)
@@ -87,11 +89,11 @@ if (!configured.success) throw new Error(configured.errorMessage)
 
 ## What it covers
 
-- **Mail (JMAP)** — mailboxes, threads, emails (get/query/set/copy/import/parse/send), search snippets, identities, submissions, vacation responses
-- **Groupware (JMAP)** — principals, calendars, calendar events and notifications, participant identities, Sieve scripts, blobs, quotas, push subscriptions, address books, contact cards, file nodes, share notifications
+- **Mail (JMAP)** — mailboxes, threads, emails (get/query/set/copy/import/parse/send), MDN disposition notifications (send/parse), search snippets, identities, submissions, vacation responses
+- **Groupware (JMAP)** — principals and availability, calendars, calendar events and notifications, participant identities, Sieve scripts, blobs, quotas, push subscriptions, address books, contact cards, file nodes, share notifications
 - **Transports** — JMAP over HTTP, EventSource (SSE), and WebSocket, plus blob upload/download
-- **Server management (registry)** — all 120 generated Stalwart management object types (domains, DKIM, certificates, MTA, spam, Sieve, lookups, reports, telemetry, storage, cluster, tasks, groupware settings, OAuth grants, index queues) plus 27 views, with typed get/set/query and a generic escape hatch for the rest
-- **OAuth/OIDC** — discovery, device and authorization-code flows, PKCE helpers, token issuance and introspection, UserInfo, client registration
+- **Server management (registry)** — all 130 generated Stalwart management object types (domains, DKIM, certificates, MTA, spam, Sieve, lookups, reports, telemetry, storage, cluster, tasks, groupware settings, OAuth grants, index queues, passkeys, mail rules, encryption, Exchange settings) plus 32 views, with typed get/set/query and a generic escape hatch for the rest
+- **OAuth/OIDC** — discovery, device and authorization-code flows, PKCE helpers, token issuance and introspection, UserInfo, client registration, passkey login challenge transport (the WebAuthn ceremony itself happens in your browser or platform authenticator — the client only moves challenges and assertions)
 - **SCIM 2.0** — users, groups, bulk, search, and service discovery
 - **HTTP helpers** — `.well-known` discovery, Outlook autodiscover, contact forms, calendar RSVP pages, health and Prometheus metrics
 
@@ -190,7 +192,28 @@ stalwart-client oauth openid-configuration
 stalwart-client oauth device-authorize --client-id <id>
 stalwart-client scim user list
 stalwart-client live delivery --help
-stalwart-client management login --username admin
+stalwart-client mdn parse --account-id main --blob-ids <blob-id>
+stalwart-client passkey registration-options --account-id main --current-secret-file ./secret.txt
+```
+
+Passkey assertions and passwords are sensitive input: prefer the file-based flags (`--login-file`, `--current-secret-file`) so secrets never appear in shell history. Write the file with `0600` permissions and delete it when done:
+
+```sh
+printf '%s' '{"type":"authCode","query":"...","consent":true}' > ./login.json
+chmod 600 ./login.json
+stalwart-client management login --login-file ./login.json
+```
+
+The client only transports WebAuthn challenges and assertions — it never performs the browser or platform ceremony itself.
+
+```ts
+import { mdnParse, passkeyRegistrationOptions } from "@adaptive-ds/stalwart-client"
+
+const parsed = await mdnParse({ config, accountId: "main", blobIds: ["blob-id"] })
+if (parsed.success) console.log(parsed.data)
+
+const options = await passkeyRegistrationOptions({ config, accountId: "main" })
+if (options.success) console.log(options.data.publicKey.rp.name)
 ```
 
 ```ts
@@ -269,5 +292,21 @@ bun run check    # format:check + type-check + 800+ unit tests
 bun run build    # emit dist/
 bun run test:e2e:local  # full e2e suite against a throwaway local Stalwart
 ```
+
+Regenerate the derived sources after pulling a new Stalwart schema (pinned to tag v1.2.1, commit `0b1342ed`):
+
+```sh
+bun scripts/registryTypesGenerate.ts --schema /opensource/stalwart/resources/schema/schema.json.gz --out src/registry/generated
+bun scripts/registryInventoryGenerate.ts  # paste stdout into docs/api-inventory.md §3
+bun run index:generate  # after adding files; never edit src/index.ts by hand
+```
+
+Verify without a live server:
+
+```sh
+bun test test/registryTypesGenerate.test.ts test/indexFreshness.test.ts
+```
+
+`bun run registry:verify` additionally checks the generated types against a local Stalwart instance (reads `ops/local-stalwart/.env.local`, loopback only).
 
 Conventions: one export per file named after it, subject-first names, bounded contexts under `src/` (generic JMAP core in `src/jmap/`, Stalwart layer in `src/client/`, one folder per API area). Run `bun run index:generate` after adding files; never edit `src/index.ts` by hand. The API contract is inventoried in [`docs/api-inventory.md`](./docs/api-inventory.md) and the agent conventions in [`docs/architecture.md`](./docs/architecture.md).
